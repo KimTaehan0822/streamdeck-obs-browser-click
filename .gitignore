@@ -1,0 +1,7 @@
+node_modules
+dist
+com.haeunga0822.obs-browser-click.sdPlugin/bin
+test/out
+*.streamDeckPlugin
+.superpowers/sdd
+release
