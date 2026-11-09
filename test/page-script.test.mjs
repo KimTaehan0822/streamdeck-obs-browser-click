@@ -44,6 +44,22 @@ test('row narrows', () => {
 	assert.equal(run(root, { row: '없는 줄', selector: 'button.ToggleView' }), 'missing')
 })
 
+test('row uses the tightest row when the title repeats', () => {
+	// ci.me shows "채팅 후원" in the feed and the widget links too; walking up from those reaches every toggle.
+	const chat = el('button', { className: 'ToggleView' })
+	const cheer = el('button', { className: 'ToggleView' })
+	const root = doc(
+		el('div', {}, [el('div', {}, [el('span', { text: '채팅 후원' })])]),
+		el('div', {}, [
+			el('div', {}, [el('div', {}, [el('span', { text: '응원 후원' })]), cheer]),
+			el('div', {}, [el('div', {}, [el('span', { text: '채팅 후원' })]), chat]),
+		]),
+	)
+	assert.equal(run(root, { row: '채팅 후원', selector: 'button.ToggleView' }), 'ok')
+	assert.deepEqual([chat.clicks, cheer.clicks], [1, 0])
+	assert.equal(run(root, { row: '채팅 후원', selector: 'button.ToggleView', index: 1 }), 'missing')
+})
+
 test('index picks nth', () => {
 	const starts = [1, 2, 3].map(() => el('a', { text: '시작' }))
 	assert.equal(run(doc(...starts), { text: '시작', index: 2 }), 'ok')

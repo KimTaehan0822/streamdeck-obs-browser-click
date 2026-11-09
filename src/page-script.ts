@@ -46,15 +46,15 @@ export function runInPage(target: Target, mode: Mode): string | ListItem[] {
 	const selector = target.selector || clickable
 	let found: Element[] = []
 	if (target.row !== undefined) {
+		// A row title can repeat elsewhere (feed items, links); the copy whose nearest container holds the fewest candidates is the row.
 		const row = norm(target.row)
 		for (const label of Array.from(document.querySelectorAll('*'))) {
 			if (label.childElementCount !== 0 || norm(label.textContent) !== row) continue
 			for (let p = label.parentElement; p; p = p.parentElement) {
 				const inRow = Array.from(p.querySelectorAll(selector))
-				if (inRow.length) {
-					found.push(...inRow)
-					break
-				}
+				if (!inRow.length) continue
+				if (!found.length || inRow.length < found.length) found = inRow
+				break
 			}
 		}
 	} else {
