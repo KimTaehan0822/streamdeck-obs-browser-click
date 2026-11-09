@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<script src="sdpi-components.js"></script>
+</head>
+<body>
+	<style>
+		.hint { color: #969696; font-size: 8pt; padding: 0 0 8px 0; }
+		.tb-btn { background: #3d3d3d; color: #d8d8d8; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; }
+		.tb-btn:hover, .tb-btn:focus-visible { background: #4a4a4a; }
+	</style>
+	<div id="fields"></div>
+	<hr />
+	<sdpi-item label="디버깅 포트"><sdpi-textfield setting="port" global placeholder="9222" pattern="^[0-9]{0,5}$"></sdpi-textfield></sdpi-item>
+	<div class="hint">OBS를 --remote-debugging-port=9222 옵션으로 켜야 동작합니다.</div>
+	<script>
+		// One page for both actions; the action UUID picks the fields. Lists come from the plugin (src/plugin.ts).
+		const REMOTE = `
+			<sdpi-item label="동작"><sdpi-select setting="preset" datasource="getPresets" placeholder="고르세요"></sdpi-select></sdpi-item>
+			<div class="hint">OBS에 해당 리모컨이 사용자 지정 독이나 브라우저 소스로 열려 있어야 합니다.</div>`
+		const CUSTOM = `
+			<sdpi-item label="페이지"><sdpi-select id="page" setting="pageUrl" datasource="getPages" hot-reload placeholder="OBS에 열린 페이지"></sdpi-select></sdpi-item>
+			<sdpi-item label=""><button type="button" class="tb-btn" id="reload">목록 새로고침</button></sdpi-item>
+			<sdpi-item label="버튼"><sdpi-select id="button" setting="button" datasource="getButtons" hot-reload placeholder="페이지를 먼저 고르세요"></sdpi-select></sdpi-item>
+			<sdpi-item label="CSS 선택자"><sdpi-textfield setting="selector" placeholder="비우면 위에서 고른 버튼"></sdpi-textfield></sdpi-item>
+			<div class="hint">글자가 없는 아이콘 버튼은 CSS 선택자로 지정하세요.</div>`
+
+		async function main() {
+			const client = SDPIComponents.streamDeckClient
+			const { actionInfo } = await client.getConnectionInfo()
+			const custom = actionInfo.action.endsWith('.custom-click')
+			const fields = document.getElementById('fields')
+			fields.innerHTML = custom ? CUSTOM : REMOTE
+			// Fields added from script miss the settings sdpi read at connect; read them again once they exist.
+			await Promise.all([...fields.querySelectorAll('[setting]')].map((e) => e.updateComplete))
+			await client.getSettings()
+			await client.getGlobalSettings()
+			if (!custom) return
+			const askButtons = (pageUrl) => client.send('sendToPlugin', { event: 'getButtons', pageUrl })
+			document.getElementById('page').addEventListener('change', (e) => askButtons(e.target.value))
+			document.getElementById('reload').addEventListener('click', () => {
+				client.send('sendToPlugin', { event: 'getPages' })
+				askButtons(document.getElementById('page').value)
+			})
+		}
+		main()
+	</script>
+</body>
+</html>

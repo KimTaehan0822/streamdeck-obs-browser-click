@@ -1,0 +1,45 @@
+{
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"SDKVersion": 2,
+	"UUID": "com.haeunga0822.obs-browser-click",
+	"Name": "OBS Browser Click",
+	"Version": "0.1.0.0",
+	"Author": "Kimtan2",
+	"Icon": "imgs/plugin",
+	"Category": "OBS Browser Click",
+	"CategoryIcon": "imgs/category",
+	"Description": "OBS 사용자 지정 독과 브라우저 소스 안의 버튼(위플랩·씨미·치지직·투네이션 리모컨 등)을 키로 누릅니다.",
+	"CodePath": "bin/plugin.js",
+	"Nodejs": {
+		"Version": "20"
+	},
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		}
+	],
+	"Software": {
+		"MinimumVersion": "7.3"
+	},
+	"Actions": [
+		{
+			"Name": "리모컨 버튼",
+			"UUID": "com.haeunga0822.obs-browser-click.remote-button",
+			"Icon": "imgs/key-off",
+			"Tooltip": "위플랩·씨미·치지직·투네이션 리모컨 버튼",
+			"Controllers": ["Keypad"],
+			"PropertyInspectorPath": "ui/click.html",
+			"States": [{ "Image": "imgs/key-off" }, { "Image": "imgs/key-on" }]
+		},
+		{
+			"Name": "범용 클릭",
+			"UUID": "com.haeunga0822.obs-browser-click.custom-click",
+			"Icon": "imgs/key-off",
+			"Tooltip": "OBS 안 아무 페이지의 버튼",
+			"Controllers": ["Keypad"],
+			"PropertyInspectorPath": "ui/click.html",
+			"States": [{ "Image": "imgs/key-off" }, { "Image": "imgs/key-on" }]
+		}
+	]
+}
