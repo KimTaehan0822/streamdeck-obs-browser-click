@@ -38,7 +38,8 @@
 			await client.getGlobalSettings()
 			if (!custom) return
 			const askButtons = (pageUrl) => client.send('sendToPlugin', { event: 'getButtons', pageUrl })
-			document.getElementById('page').addEventListener('change', (e) => askButtons(e.target.value))
+			// sdpi-select reports a new value with 'valuechange' on itself; the inner <select>'s 'change' never leaves its shadow root.
+			document.getElementById('page').addEventListener('valuechange', (e) => askButtons(e.target.value))
 			document.getElementById('reload').addEventListener('click', () => {
 				client.send('sendToPlugin', { event: 'getPages' })
 				askButtons(document.getElementById('page').value)

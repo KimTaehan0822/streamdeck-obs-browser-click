@@ -16,8 +16,8 @@ const TOONATION = 'toon.at/widget/controller/'
 const ON = { onClass: 'state_on' }
 
 const weflab = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '위플랩', label, target: { url: WEFLAB, ...t } })
-const cime = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '씨미', label, target: { url: CIME, ...t } })
-const chzzk = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '치지직', label, target: { url: CHZZK, ...t } })
+const cime = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '씨미', label, target: { url: CIME, host: 'studio.ci.me', ...t } })
+const chzzk = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '치지직', label, target: { url: CHZZK, host: 'studio.chzzk.naver.com', ...t } })
 const toonation = (id: string, label: string, t: Omit<Target, 'url'>): Preset => ({ id, service: '투네이션', label, target: { url: TOONATION, ...t } })
 
 // Each target was checked against the live remotes on 2026-11-10 to match exactly one element.

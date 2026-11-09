@@ -99,7 +99,7 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 		} catch {
 			return void (this.show(instance, 'offline'), alert())
 		}
-		const page = findPage(pages, target.url)
+		const page = findPage(pages, target.url, target.host)
 		if (!page) return void (this.show(instance, 'missing'), alert())
 		try {
 			if ((await this.clicker.evaluate(page.webSocketDebuggerUrl, pageExpression(target, 'click'))) !== 'ok') return void alert()
@@ -125,7 +125,7 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 			}
 			for (const instance of [...this.instances.values()]) {
 				const target = this.targetOf(instance.settings)
-				const page = target && findPage(pages, target.url)
+				const page = target && findPage(pages, target.url, target.host)
 				if (!target || !page) {
 					this.show(instance, 'missing')
 					continue

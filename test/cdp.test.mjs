@@ -40,6 +40,16 @@ test('findPage matches substring, first wins', () => {
 	assert.equal(findPage(pages, ''), undefined)
 })
 
+test('findPage pins the host when given', () => {
+	const pages = [
+		{ id: '1', type: 'page', title: 'other', url: 'https://example.com/rcs/widget', webSocketDebuggerUrl: 'ws://1' },
+		{ id: '2', type: 'page', title: '씨미', url: 'https://studio.ci.me/1/rc', webSocketDebuggerUrl: 'ws://2' },
+	]
+	assert.equal(findPage(pages, '/rc', 'studio.ci.me')?.id, '2')
+	assert.equal(findPage(pages, '/rc', 'studio.chzzk.naver.com'), undefined)
+	assert.equal(findPage([{ ...pages[0], url: 'not a url' }], 'url', 'studio.ci.me'), undefined)
+})
+
 test('evaluate returns value', async () => {
 	const cdp = await fakeCdp()
 	try {

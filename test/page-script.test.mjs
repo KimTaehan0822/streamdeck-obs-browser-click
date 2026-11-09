@@ -32,16 +32,23 @@ test('within narrows', () => {
 })
 
 test('row narrows', () => {
-	const toggles = () => [el('button', { className: 'ToggleView' }), el('button', { className: 'ToggleView' })]
-	const chat = toggles()
-	const cheer = toggles()
+	const chat = el('button', { className: 'ToggleView' })
+	const cheer = el('button', { className: 'ToggleView' })
 	const root = doc(
-		el('div', {}, [el('div', {}, [el('span', { text: '채팅 후원' })]), el('div', {}, chat)]),
-		el('div', {}, [el('div', {}, [el('span', { text: '응원 후원' })]), el('div', {}, cheer)]),
+		el('div', {}, [el('div', {}, [el('span', { text: '채팅 후원' })]), el('div', {}, [chat])]),
+		el('div', {}, [el('div', {}, [el('span', { text: '응원 후원' })]), el('div', {}, [cheer])]),
 	)
-	assert.equal(run(root, { row: '응원 후원', selector: 'button.ToggleView', index: 1 }), 'ok')
-	assert.deepEqual([...chat, ...cheer].map((b) => b.clicks), [0, 0, 0, 1])
+	assert.equal(run(root, { row: '응원 후원', selector: 'button.ToggleView' }), 'ok')
+	assert.deepEqual([chat.clicks, cheer.clicks], [0, 1])
 	assert.equal(run(root, { row: '없는 줄', selector: 'button.ToggleView' }), 'missing')
+})
+
+test('row whose only copy reaches several candidates is missing', () => {
+	// The real "워프 (레이드)" row is gone; its title survives in a feed item whose climb ends at the page wrapper.
+	const toggles = [el('button', { className: 'ToggleView' }), el('button', { className: 'ToggleView' })]
+	const root = doc(el('div', {}, [el('div', {}, [el('span', { text: '워프 (레이드)' })]), ...toggles]))
+	assert.equal(run(root, { row: '워프 (레이드)', selector: 'button.ToggleView' }), 'missing')
+	assert.deepEqual(toggles.map((b) => b.clicks), [0, 0])
 })
 
 test('row uses the tightest row when the title repeats', () => {

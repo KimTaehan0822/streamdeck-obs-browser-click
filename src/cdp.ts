@@ -16,9 +16,11 @@ export async function listPages(port: number): Promise<CdpPage[]> {
 	return all.filter((p) => p.type === 'page')
 }
 
-export function findPage(pages: CdpPage[], urlPart: string): CdpPage | undefined {
+/** First page whose URL contains urlPart and, when host is given, whose host is exactly that. */
+export function findPage(pages: CdpPage[], urlPart: string, host?: string): CdpPage | undefined {
 	if (!urlPart) return undefined
-	return pages.find((p) => p.url.includes(urlPart))
+	const hostOf = (url: string) => URL.canParse(url) ? new URL(url).host : ''
+	return pages.find((p) => p.url.includes(urlPart) && (!host || hostOf(p.url) === host))
 }
 
 // shortcut: 호출마다 새 WebSocket. 키가 많아져 느리면 페이지별 연결 유지로 바꿈

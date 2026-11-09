@@ -2,13 +2,15 @@
 export interface Target {
 	/** Part of the page URL. */
 	url: string
+	/** The page's host must be exactly this, for URL parts other sites could share ('/rc'). */
+	host?: string
 	/** CSS for the candidates; CLICKABLE when absent. */
 	selector?: string
 	/** The candidate's text (trimmed, runs of spaces made one) must equal this. */
 	text?: string
 	/** Only candidates inside an element matching this CSS. */
 	within?: string
-	/** Only candidates in the nearest ancestor of a leaf element whose text equals this (a row title). */
+	/** The one candidate in the nearest ancestor of a leaf element whose text equals this (a row title). */
 	row?: string
 	/** The nth candidate left after filtering; 0 when absent. */
 	index?: number
@@ -46,14 +48,15 @@ export function runInPage(target: Target, mode: Mode): string | ListItem[] {
 	const selector = target.selector || clickable
 	let found: Element[] = []
 	if (target.row !== undefined) {
-		// A row title can repeat elsewhere (feed items, links); the copy whose nearest container holds the fewest candidates is the row.
+		// A row title can repeat elsewhere (feed items, links). Only a copy whose nearest container holds exactly one
+		// candidate is the row; a copy that climbs to a container of several would press another row's button.
 		const row = norm(target.row)
 		for (const label of Array.from(document.querySelectorAll('*'))) {
 			if (label.childElementCount !== 0 || norm(label.textContent) !== row) continue
 			for (let p = label.parentElement; p; p = p.parentElement) {
 				const inRow = Array.from(p.querySelectorAll(selector))
 				if (!inRow.length) continue
-				if (!found.length || inRow.length < found.length) found = inRow
+				if (inRow.length === 1 && !found.length) found = inRow
 				break
 			}
 		}

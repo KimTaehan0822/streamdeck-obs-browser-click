@@ -22,8 +22,8 @@ test('every preset has url and a way to find it', () => {
 
 test('service urls', () => {
 	for (const p of byService('위플랩')) assert.equal(p.target.url, 'weflab.com/alertlist?mode=remote')
-	for (const p of byService('씨미')) assert.equal(p.target.url, '/rc')
-	for (const p of byService('치지직')) assert.equal(p.target.url, '/remotecontrol')
+	for (const p of byService('씨미')) assert.deepEqual([p.target.host, p.target.url], ['studio.ci.me', '/rc'])
+	for (const p of byService('치지직')) assert.deepEqual([p.target.host, p.target.url], ['studio.chzzk.naver.com', '/remotecontrol'])
 	for (const p of byService('투네이션')) assert.equal(p.target.url, 'toon.at/widget/controller/')
 })
 

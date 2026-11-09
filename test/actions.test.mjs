@@ -157,6 +157,22 @@ test('getButtons numbers repeats', async () => {
 	assert.deepEqual(await buttonItems(fakeClicker({ offline: true }), 'x'), [])
 })
 
+test('two-state keys never flip by themselves', async () => {
+	// Without this flag Stream Deck toggles the state on key-up, racing the state read from the page.
+	const { readFileSync } = await import('node:fs')
+	const manifest = JSON.parse(readFileSync(new URL('../com.haeunga0822.obs-browser-click.sdPlugin/manifest.json', import.meta.url), 'utf8'))
+	for (const a of manifest.Actions) assert.equal(a.DisableAutomaticStates, true, a.UUID)
+})
+
+test('press finds the page by host too', async () => {
+	const other = { id: 'x', type: 'page', title: 'x', url: 'https://example.com/rcs/a', webSocketDebuggerUrl: 'ws://x' }
+	const cime = { id: 'c', type: 'page', title: '씨미', url: 'https://studio.ci.me/1/rc', webSocketDebuggerUrl: 'ws://c' }
+	const c = fakeClicker({ pages: [other, cime] })
+	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'cime-skip' })
+	await a.onKeyDown(f.ev())
+	assert.equal(c.evaluated.at(-1).wsUrl, 'ws://c')
+})
+
 test('timer stops', async () => {
 	const c = fakeClicker({ pages: PAGES })
 	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' }, 'lonely')
