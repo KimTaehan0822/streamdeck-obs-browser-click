@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { RemoteButtonAction, CustomClickAction, customTarget, presetItems, pageItems, buttonItems } from '../dist/actions.js'
+import { RemoteButtonAction, CustomClickAction, customTarget, presetItems, pageItems, buttonItems, pointOf, shotItem } from '../dist/actions.js'
 import { pageExpression } from '../dist/page-script.js'
 import { presetById } from '../dist/presets.js'
 import { fakeAction, fakeClicker, PAGES } from './fake-action.mjs'
@@ -171,6 +171,65 @@ test('press finds the page by host too', async () => {
 	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'cime-skip' })
 	await a.onKeyDown(f.ev())
 	assert.equal(c.evaluated.at(-1).wsUrl, 'ws://c')
+})
+
+const WEFLAB = 'https://weflab.com/alertlist?mode=remote'
+
+test('point needs numbers', async () => {
+	assert.equal(pointOf({ mode: 'point', pageUrl: WEFLAB, pointX: '', pointY: '5' }), undefined)
+	assert.equal(pointOf({ mode: 'point', pageUrl: WEFLAB, pointX: 'a', pointY: '5' }), undefined)
+	assert.equal(pointOf({ mode: 'point', pageUrl: WEFLAB, pointX: '-1', pointY: '5' }), undefined)
+	assert.equal(pointOf({ mode: 'point', pointX: '1', pointY: '5' }), undefined)
+	assert.equal(pointOf({ pageUrl: WEFLAB, pointX: '1', pointY: '5' }), undefined, 'button mode has no point')
+	assert.deepEqual(pointOf({ mode: 'point', pageUrl: WEFLAB, pointX: ' 60 ', pointY: '108' }), { x: 60, y: 108 })
+	const c = fakeClicker({ pages: PAGES })
+	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '', pointY: '5' })
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+	assert.equal(c.clicked.length + c.evaluated.length, 0)
+	assert.equal(f.calls.titles.at(-1), '없음')
+})
+
+test('point press clicks at the point', async () => {
+	const c = fakeClicker({ pages: PAGES })
+	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '60', pointY: '108' })
+	assert.equal(f.calls.titles.at(-1), '위치 60,108')
+	await a.onKeyDown(f.ev())
+	assert.deepEqual(c.clicked, [{ wsUrl: 'ws://w', x: 60, y: 108 }])
+	assert.equal(c.evaluated.length, 0)
+	assert.equal(f.calls.alerts, 0)
+})
+
+test('point outside the page alerts', async () => {
+	const c = fakeClicker({ pages: PAGES, point: () => 'outside' })
+	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '900', pointY: '108' })
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+})
+
+test('point click error alerts', async () => {
+	const c = fakeClicker({ pages: PAGES, point: () => Promise.reject(new Error('CDP timeout')) })
+	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '1', pointY: '1' })
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+})
+
+test('button mode is the default', async () => {
+	const c = fakeClicker({ pages: PAGES })
+	const { a, f } = await appear(CustomClickAction, c, { pageUrl: WEFLAB, button: '0\t일시 중지', pointX: '60', pointY: '108' })
+	await a.onKeyDown(f.ev())
+	assert.equal(c.clicked.length, 0)
+	assert.equal(c.evaluated.length, 1)
+	assert.equal(f.calls.titles.at(-1), '일시 중지')
+})
+
+test('getShot without page', async () => {
+	assert.deepEqual(await shotItem(fakeClicker({ pages: PAGES }), 'nothing'), { ok: false })
+	assert.deepEqual(await shotItem(fakeClicker({ offline: true }), WEFLAB), { ok: false })
+	const c = fakeClicker({ pages: PAGES })
+	assert.deepEqual(await shotItem(c, WEFLAB), { ok: true, data: 'SlBFRw==', width: 617, height: 414 })
+	assert.deepEqual(c.shots, ['ws://w'])
+	assert.deepEqual(await shotItem(c, ''), { ok: false })
 })
 
 test('timer stops', async () => {

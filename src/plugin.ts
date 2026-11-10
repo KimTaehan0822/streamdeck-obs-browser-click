@@ -1,6 +1,6 @@
 import streamDeck from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
-import { buttonItems, createClicker, CustomClickAction, pageItems, presetItems, RemoteButtonAction } from './actions.js'
+import { buttonItems, createClicker, CustomClickAction, pageItems, presetItems, RemoteButtonAction, shotItem } from './actions.js'
 
 // The Stream Deck app keeps no console output; send errors to the plugin's logs folder instead.
 console.error = (...args: unknown[]) => streamDeck.logger.error(args.map(String).join(' '))
@@ -25,6 +25,9 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 		const settings: JsonObject = await ev.action.getSettings().catch(() => ({}))
 		const pageUrl = typeof payload.pageUrl === 'string' ? payload.pageUrl : settings.pageUrl
 		items = await buttonItems(clicker, typeof pageUrl === 'string' ? pageUrl : '')
+	} else if (payload.event === 'getShot') {
+		const shot = await shotItem(clicker, typeof payload.pageUrl === 'string' ? payload.pageUrl : '')
+		return void streamDeck.ui.sendToPropertyInspector({ event: 'getShot', ...shot } as JsonObject).catch(() => {})
 	} else return
 	streamDeck.ui.sendToPropertyInspector({ event: payload.event, items } as JsonObject).catch(() => {})
 })

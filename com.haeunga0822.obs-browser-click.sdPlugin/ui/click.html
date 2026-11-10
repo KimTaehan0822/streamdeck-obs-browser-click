@@ -9,6 +9,11 @@
 		.hint { color: #969696; font-size: 8pt; padding: 0 0 8px 0; }
 		.tb-btn { background: #3d3d3d; color: #d8d8d8; border: none; border-radius: 3px; padding: 2px 8px; cursor: pointer; }
 		.tb-btn:hover, .tb-btn:focus-visible { background: #4a4a4a; }
+		.notice { color: #f0c040; font-size: 8pt; padding: 0 0 8px 0; line-height: 1.4; }
+		.shot { position: relative; margin: 0 0 8px 0; cursor: crosshair; }
+		.shot img { display: block; width: 100%; border: 1px solid #3d3d3d; }
+		.shot .dot { position: absolute; width: 10px; height: 10px; margin: -6px 0 0 -6px; border: 1px solid #fff; border-radius: 50%; background: #ff3b3b; pointer-events: none; }
+		[hidden] { display: none !important; }
 	</style>
 	<div id="fields"></div>
 	<hr />
@@ -22,9 +27,20 @@
 		const CUSTOM = `
 			<sdpi-item label="페이지"><sdpi-select id="page" setting="pageUrl" datasource="getPages" hot-reload placeholder="OBS에 열린 페이지"></sdpi-select></sdpi-item>
 			<sdpi-item label=""><button type="button" class="tb-btn" id="reload">목록 새로고침</button></sdpi-item>
-			<sdpi-item label="버튼"><sdpi-select id="button" setting="button" datasource="getButtons" hot-reload placeholder="페이지를 먼저 고르세요"></sdpi-select></sdpi-item>
-			<sdpi-item label="CSS 선택자"><sdpi-textfield setting="selector" placeholder="비우면 위에서 고른 버튼"></sdpi-textfield></sdpi-item>
-			<div class="hint">글자가 없는 아이콘 버튼은 CSS 선택자로 지정하세요.</div>`
+			<sdpi-item label="방식"><sdpi-select id="mode" setting="mode" default="button"><option value="button">버튼으로 찾기</option><option value="point">위치 찍기</option></sdpi-select></sdpi-item>
+			<div id="by-button">
+				<sdpi-item label="버튼"><sdpi-select id="button" setting="button" datasource="getButtons" hot-reload placeholder="페이지를 먼저 고르세요"></sdpi-select></sdpi-item>
+				<sdpi-item label="CSS 선택자"><sdpi-textfield setting="selector" placeholder="비우면 위에서 고른 버튼"></sdpi-textfield></sdpi-item>
+				<div class="hint">글자가 없는 아이콘 버튼은 CSS 선택자로 지정하세요.</div>
+			</div>
+			<div id="by-point" hidden>
+				<sdpi-item label=""><button type="button" class="tb-btn" id="shoot">화면 불러오기</button></sdpi-item>
+				<div class="notice">독이나 브라우저 소스의 크기를 바꾸면 같은 좌표가 다른 곳을 누를 수 있어요. 크기를 바꾼 뒤에는 꼭 [화면 불러오기]로 위치를 다시 찍어 주세요.</div>
+				<div class="hint" id="shot-status" role="status">페이지를 고르고 [화면 불러오기]를 누른 뒤, 누를 곳을 찍으세요.</div>
+				<div class="shot" id="shot" hidden><img id="shot-img" alt="페이지 캡처: 누를 곳을 찍으세요" /><div class="dot" id="dot" hidden></div></div>
+				<sdpi-item label="X"><sdpi-textfield id="px" setting="pointX" pattern="^[0-9]*$" placeholder="찍으면 채워져요"></sdpi-textfield></sdpi-item>
+				<sdpi-item label="Y"><sdpi-textfield id="py" setting="pointY" pattern="^[0-9]*$" placeholder="찍으면 채워져요"></sdpi-textfield></sdpi-item>
+			</div>`
 
 		async function main() {
 			const client = SDPIComponents.streamDeckClient
@@ -32,17 +48,66 @@
 			const custom = actionInfo.action.endsWith('.custom-click')
 			const fields = document.getElementById('fields')
 			fields.innerHTML = custom ? CUSTOM : REMOTE
-			// Fields added from script miss the settings sdpi read at connect; read them again once they exist.
+			// sdpi-select only sees options added after it is on the page, and fields added from script miss the
+			// settings sdpi read at connect: re-add the options and read the settings again once the fields exist.
+			for (const s of fields.querySelectorAll('sdpi-select')) s.append(...s.querySelectorAll('option'))
 			await Promise.all([...fields.querySelectorAll('[setting]')].map((e) => e.updateComplete))
-			await client.getSettings()
+			const { settings } = await client.getSettings()
 			await client.getGlobalSettings()
 			if (!custom) return
+			const $ = (id) => document.getElementById(id)
 			const askButtons = (pageUrl) => client.send('sendToPlugin', { event: 'getButtons', pageUrl })
 			// sdpi-select reports a new value with 'valuechange' on itself; the inner <select>'s 'change' never leaves its shadow root.
-			document.getElementById('page').addEventListener('valuechange', (e) => askButtons(e.target.value))
-			document.getElementById('reload').addEventListener('click', () => {
+			$('page').addEventListener('valuechange', (e) => {
+				askButtons(e.target.value)
+				$('shot').hidden = true // the old capture belongs to the old page
+			})
+			$('reload').addEventListener('click', () => {
 				client.send('sendToPlugin', { event: 'getPages' })
-				askButtons(document.getElementById('page').value)
+				askButtons($('page').value)
+			})
+
+			const showMode = (mode) => {
+				$('by-button').hidden = mode === 'point'
+				$('by-point').hidden = mode !== 'point'
+			}
+			showMode(settings?.mode)
+			$('mode').addEventListener('valuechange', (e) => showMode(e.target.value))
+
+			// Capture: the plugin answers { event: 'getShot', ok, data (JPEG base64), width, height } in page pixels.
+			let shot
+			const placeDot = (x, y) => {
+				const ok = shot && x !== '' && y !== '' && !isNaN(x) && !isNaN(y)
+				$('dot').hidden = !ok
+				if (ok) Object.assign($('dot').style, { left: `${(x / shot.width) * 100}%`, top: `${(y / shot.height) * 100}%` })
+			}
+			$('shoot').addEventListener('click', () => {
+				if (!$('page').value) return void ($('shot-status').textContent = '페이지를 먼저 고르세요.')
+				$('shot-status').textContent = '불러오는 중…'
+				client.send('sendToPlugin', { event: 'getShot', pageUrl: $('page').value })
+			})
+			client.sendToPropertyInspector.subscribe(async (ev) => {
+				if (ev.payload?.event !== 'getShot') return
+				if (!ev.payload.ok) {
+					$('shot').hidden = true
+					return void ($('shot-status').textContent = '화면을 불러오지 못했어요. OBS가 디버깅 옵션으로 켜져 있고 그 페이지가 열려 있는지 확인하세요.')
+				}
+				shot = ev.payload
+				$('shot-img').src = `data:image/jpeg;base64,${shot.data}`
+				$('shot').hidden = false
+				$('shot-status').textContent = `페이지 크기 ${shot.width}×${shot.height}. 누를 곳을 찍으세요.`
+				const current = (await client.getSettings()).settings
+				placeDot(current.pointX, current.pointY)
+			})
+			$('shot-img').addEventListener('click', async (e) => {
+				const img = e.currentTarget
+				const x = Math.round((e.offsetX * shot.width) / img.clientWidth)
+				const y = Math.round((e.offsetY * shot.height) / img.clientHeight)
+				const current = (await client.getSettings()).settings
+				await client.setSettings({ ...current, pointX: String(x), pointY: String(y) })
+				await client.getSettings() // fills the X and Y fields
+				placeDot(x, y)
+				$('shot-status').textContent = `위치 ${x},${y}를 저장했어요.`
 			})
 		}
 		main()

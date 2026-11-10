@@ -7,7 +7,7 @@ import {
 	type WillDisappearEvent,
 } from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
-import { evaluate, findPage, listPages, type CdpPage } from './cdp.js'
+import { clickAt, evaluate, findPage, listPages, screenshot, type CdpPage } from './cdp.js'
 import { pageExpression, type ListItem, type Target } from './page-script.js'
 import { PRESETS, presetById } from './presets.js'
 
@@ -16,10 +16,12 @@ export interface Clicker {
 	port(): number
 	listPages(): Promise<CdpPage[]>
 	evaluate(wsUrl: string, expr: string): Promise<unknown>
+	clickAt(wsUrl: string, x: number, y: number): Promise<'ok' | 'outside'>
+	screenshot(wsUrl: string): Promise<{ data: string; width: number; height: number }>
 }
 
 export function createClicker(port: () => number): Clicker {
-	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr) }
+	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot }
 }
 
 export const POLL_MS = 1000
@@ -47,12 +49,17 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 	private timer?: NodeJS.Timeout
 	private busy = false
 
-	constructor(private readonly clicker: Clicker) {
+	constructor(protected readonly clicker: Clicker) {
 		super()
 	}
 
 	protected abstract targetOf(settings: S): Target | undefined
 	protected abstract labelOf(settings: S): string
+
+	/** Presses on the page; true when it was pressed. */
+	protected async press(_settings: S, page: CdpPage, target: Target): Promise<boolean> {
+		return (await this.clicker.evaluate(page.webSocketDebuggerUrl, pageExpression(target, 'click'))) === 'ok'
+	}
 
 	get polling(): boolean {
 		return this.timer !== undefined
@@ -102,7 +109,7 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 		const page = findPage(pages, target.url, target.host)
 		if (!page) return void (this.show(instance, 'missing'), alert())
 		try {
-			if ((await this.clicker.evaluate(page.webSocketDebuggerUrl, pageExpression(target, 'click'))) !== 'ok') return void alert()
+			if (!(await this.press(instance.settings, page, target))) return void alert()
 		} catch (error) {
 			fail(error)
 			return void alert()
@@ -178,7 +185,16 @@ export class RemoteButtonAction extends ClickAction<RemoteSettings> {
 	}
 }
 
-type CustomSettings = { pageUrl?: string; button?: string; selector?: string }
+type CustomSettings = { pageUrl?: string; button?: string; selector?: string; mode?: string; pointX?: string; pointY?: string }
+
+/** The page point to click in "위치 찍기" mode; undefined unless both coordinates are numbers ≥ 0. */
+export function pointOf(s: CustomSettings): { x: number; y: number } | undefined {
+	if (s.mode !== 'point' || !s.pageUrl) return undefined
+	const num = (v?: string) => (v?.trim() ? Number(v) : NaN)
+	const x = num(s.pointX)
+	const y = num(s.pointY)
+	return Number.isFinite(x) && Number.isFinite(y) && x >= 0 && y >= 0 ? { x, y } : undefined
+}
 
 /** A selector wins over the chosen button; `button` is "<index>\t<text>" as buttonItems makes it. */
 export function customTarget(s: CustomSettings): Target | undefined {
@@ -193,11 +209,32 @@ export function customTarget(s: CustomSettings): Target | undefined {
 export class CustomClickAction extends ClickAction<CustomSettings> {
 	override readonly manifestId = 'com.haeunga0822.obs-browser-click.custom-click'
 	protected targetOf(s: CustomSettings): Target | undefined {
-		return customTarget(s)
+		if (s.mode !== 'point') return customTarget(s)
+		return pointOf(s) && { url: s.pageUrl ?? '' } // only finds the page; press() clicks the point
 	}
 	protected labelOf(s: CustomSettings): string {
+		const p = pointOf(s)
+		if (p) return `위치 ${p.x},${p.y}`
 		const t = customTarget(s)
 		return t?.selector ?? t?.text ?? ''
+	}
+	protected override async press(s: CustomSettings, page: CdpPage, target: Target): Promise<boolean> {
+		const p = pointOf(s)
+		if (!p) return super.press(s, page, target)
+		return (await this.clicker.clickAt(page.webSocketDebuggerUrl, p.x, p.y)) === 'ok'
+	}
+}
+
+export async function shotItem(
+	clicker: Clicker,
+	pageUrl: string,
+): Promise<{ ok: true; data: string; width: number; height: number } | { ok: false }> {
+	try {
+		const page = findPage(await clicker.listPages(), pageUrl)
+		if (!page) return { ok: false }
+		return { ok: true, ...(await clicker.screenshot(page.webSocketDebuggerUrl)) }
+	} catch {
+		return { ok: false }
 	}
 }
 
