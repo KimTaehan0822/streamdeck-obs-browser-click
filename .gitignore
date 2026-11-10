@@ -5,3 +5,4 @@ test/out
 *.streamDeckPlugin
 .superpowers/sdd
 release
+com.haeunga0822.obs-browser-click.sdPlugin/logs
