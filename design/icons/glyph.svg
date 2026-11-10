@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+	<!-- One-colour white glyph (category icon, off key). The cursor cuts a gap into the window so it reads on any background. -->
+	<defs>
+		<mask id="gap">
+			<rect width="256" height="256" fill="#fff"/>
+			<path d="M136 126v86l23-21 17 38 18-8-17-37h32z" fill="#000" stroke="#000" stroke-width="26" stroke-linejoin="round"/>
+		</mask>
+	</defs>
+	<g mask="url(#gap)" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round">
+		<rect x="28" y="40" width="184" height="150" rx="20"/>
+		<path d="M28 84h184"/>
+	</g>
+	<rect x="58" y="112" width="98" height="44" rx="22" fill="#FFFFFF" mask="url(#gap)"/>
+	<g fill="#FFFFFF">
+		<circle cx="54" cy="62" r="8"/>
+		<circle cx="78" cy="62" r="8"/>
+	</g>
+	<path d="M136 126v86l23-21 17 38 18-8-17-37h32z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
+</svg>
