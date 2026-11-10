@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OBS Browser Click Stream Deck Plugin Manual</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<h1>OBS Browser Click Stream Deck Plugin Manual</h1>
+<p><time datetime="2026-11-11">2026-11-11</time></p>
+<p>This plugin presses buttons inside OBS custom browser docks and browser sources (Weflab, ci.me, Chzzk and Toonation remotes, and more) from a Stream Deck key. You don't need to open the Interact window, and it works even when the dock is hidden behind another tab.</p>
+<p>Made by <strong>Kimtan2 (김탄2) of Doctor Goblin (닥터고블린)</strong>.</p>
+<p>The plugin's settings screen is in Korean. This manual gives each Korean label as it appears on screen, followed by its meaning.</p>
+
+<section><h2>What you need</h2>
+<table><thead><tr><th>Item</th><th>Requirement</th></tr></thead><tbody>
+<tr><td>Computer</td><td>Windows 10 or later</td></tr>
+<tr><td>Stream Deck app</td><td>Stream Deck software 7.3 or later</td></tr>
+<tr><td>OBS</td><td>OBS Studio (Windows, 64-bit)</td></tr>
+<tr><td>Installer</td><td><code>OBS-Browser-Click.streamDeckPlugin</code></td></tr>
+</tbody></table>
+<p>The remote you want to press (Weflab, ci.me, Chzzk, Toonation) must be open in OBS as a <strong>custom browser dock</strong> or a <strong>browser source</strong>.</p>
+</section>
+
+<section><h2>Step 1: Install the plugin</h2>
+<ol>
+<li><p>Double-click <code>OBS-Browser-Click.streamDeckPlugin</code>.</p></li>
+<li><p>The Stream Deck app opens and asks whether to install. Click <strong>Install</strong>. If it asks to replace an older version, choose Install as well.</p></li>
+<li><p>Check that an <strong>OBS Browser Click</strong> category appears in the action list on the right.</p></li>
+</ol>
+</section>
+
+<section><h2>Step 2: Start OBS with the debug option</h2>
+<p>The plugin reaches the pages inside OBS through OBS's <strong>remote debugging port</strong>. OBS must be started with <code>--remote-debugging-port=9222</code>. One button makes a shortcut with this option for you.</p>
+<ol>
+<li><p>Drag any <strong>OBS Browser Click</strong> action onto a key and click it.</p></li>
+<li><p>At the bottom of the settings screen, click <strong>[OBS 바로가기 설정]</strong> (set up OBS shortcut).</p></li>
+<li><p>When the message says it made "OBS Studio (Browser Click)" on the desktop and Start menu, you're done. If OBS is pinned to the taskbar, that icon gets the option too.</p></li>
+<li><p>Close OBS completely and start it again from the new <strong>OBS Studio (Browser Click)</strong> shortcut (or the taskbar OBS).</p></li>
+</ol>
+<p><strong>Note:</strong> the original "OBS Studio" icons (public desktop, Start menu) still start OBS without the option. The OBS installer recreates them on every update, so the plugin leaves them alone. The new shortcut lives in your own user folder, so OBS updates don't remove it.</p>
+<p><strong>Doing it by hand:</strong> right-click an OBS shortcut → Properties → add a space and <code>--remote-debugging-port=9222</code> at the end of <strong>Target</strong>. <strong>Start in</strong> must be <code>C:\Program Files\obs-studio\bin\64bit</code>.</p>
+<p><strong>To check:</strong> keys don't show <strong>OFFLINE</strong> or <strong>디버그 꺼짐</strong> (debug off). Opening <code>http://127.0.0.1:9222/json/list</code> in a browser also shows a list of pages.</p>
+</section>
+
+<section><h2>Things to know about the debug option</h2>
+<ul>
+<li><p><strong>Other programs on this PC</strong> can see and operate the pages inside OBS (your signed-in Chzzk and ci.me studios, the Weflab remote and so on). The internet and ordinary web pages can't get in: the port opens on this PC only (<code>127.0.0.1</code>), and OBS rejects connections from web pages. Don't install programs you don't trust.</p></li>
+<li><p><strong>Port conflicts:</strong> if another program (such as Chrome in debug mode) uses the same port, OBS may not be able to open it. When the port doesn't belong to OBS, the plugin presses nothing and the key shows OFFLINE. Change the port under "Settings" below and click [OBS 바로가기 설정] again.</p></li>
+<li><p><strong>Started without the option:</strong> starting OBS from the original icon, or from another program, leaves the option out. Keys then show <strong>디버그 꺼짐</strong> (debug off).</p></li>
+<li><p><strong>OBS updates:</strong> the installer recreates the public shortcuts. Your new shortcut and the taskbar icon stay. If the option ever goes missing, click [OBS 바로가기 설정] once more.</p></li>
+<li><p><strong>Performance:</strong> practically no effect. The port only waits, and the plugin checks state once a second.</p></li>
+</ul>
+</section>
+
+<section><h2>Step 3: Make your first key</h2>
+<p>This example skips a Weflab donation alert with one key.</p>
+<ol>
+<li><p>Copy the remote URL from your Weflab dashboard and add it in OBS under <strong>Docks → Custom Browser Docks</strong> (skip this if it's already there).</p></li>
+<li><p>Drag <strong>OBS Browser Click → 위플랩 리모컨</strong> (Weflab remote) onto a key.</p></li>
+<li><p>In the settings screen, under <strong>동작</strong> (action), choose <strong>알림 취소(넘기기)</strong> (cancel alert / skip).</p></li>
+<li><p>The key shows "알림 취소(넘기기)". Press it while an alert plays to skip it.</p></li>
+</ol>
+<p>Try it first with Weflab's <strong>테스트 알림</strong> (test alert).</p>
+</section>
+
+<section><h2>Actions</h2>
+<p>Each service has its own action. Put it on a key, then choose the remote's button under <strong>동작</strong> (action).</p>
+<table class="name"><thead><tr><th>Action</th><th>What you can choose</th></tr></thead><tbody>
+<tr><td>위플랩 리모컨<br>(Weflab remote)</td><td>Pause/resume alerts ●, cancel alert (skip), cancel all alerts, refresh list, test alert, timer start / stop / time / uptime / delete, avatar game start / cancel, billboard cancel current / cancel all, vote start / stop / result</td></tr>
+<tr><td>씨미 리모컨<br>(ci.me remote)</td><td>Pause, skip, chat / cheer / video / mission donations on/off ●, warp: followers only ●, send viewers</td></tr>
+<tr><td>치지직 리모컨<br>(Chzzk remote)</td><td>Skip TTS, stop alert</td></tr>
+<tr><td>투네이션 리모컨<br>(Toonation remote)</td><td>Pause alerts ●, skip</td></tr>
+<tr><td>범용 클릭<br>(custom click)</td><td>Pick any button, or a point on the page, yourself (see below)</td></tr>
+</tbody></table>
+<p>Actions marked ● follow the on/off state on the page. When it's on, the key gets a sky-blue ring. In the Stream Deck app you can click the two dots under the key (left off, right on) to set a different icon and title for each state.</p>
+</section>
+
+<section><h2>Custom click (범용 클릭)</h2>
+<p>Use it for buttons that aren't in the lists, on any page open in OBS.</p>
+<ol>
+<li><p><strong>페이지</strong> (page): choose one of the pages open in OBS. If you just started OBS or added a dock, click <strong>[목록 새로고침]</strong> (refresh list).</p></li>
+<li><p><strong>방식</strong> (method): choose <strong>버튼으로 찾기</strong> (find by button) or <strong>위치 찍기</strong> (pick a point).</p></li>
+<li><p><strong>Find by button:</strong> the <strong>버튼</strong> (button) list shows the page's buttons by their text. Buttons with the same text get a number, like <code>시작 (2)</code>. For an icon button without text, enter a <strong>CSS 선택자</strong> (CSS selector); it wins over the button list.</p></li>
+<li><p><strong>Pick a point:</strong> click <strong>[화면 불러오기]</strong> (load screen) to see a capture of the page, then click where to press. A red dot marks it and X, Y fill in.</p></li>
+</ol>
+<p><strong>About picked points:</strong> if you resize the dock or browser source, the same coordinates may land somewhere else. After resizing, pick the point again with [화면 불러오기]. The click goes to that page only, and your real mouse cursor doesn't move.</p>
+</section>
+
+<section><h2>Key titles</h2>
+<p>A key normally shows the name of its action. If you type your own text in the Stream Deck app's <strong>Title</strong> field, the plugin leaves it as it is. If text gets cut off, make it smaller with the <strong>T</strong> button next to the Title field.</p>
+</section>
+
+<section><h2>Settings</h2>
+<table class="name"><thead><tr><th>Item</th><th>Default</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>디버깅 포트<br>(debug port)</td><td><code>9222</code> (when empty)</td><td>Must match the number in the OBS option. Shared by all actions</td></tr>
+<tr><td>[OBS 바로가기 설정]</td><td></td><td>Makes a shortcut that starts OBS with this port. Click it again after changing the port</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>What keys show, and troubleshooting</h2>
+<table><thead><tr><th>Shown / symptom</th><th>Meaning</th><th>What to do</th></tr></thead><tbody>
+<tr><td>OFFLINE</td><td>OBS isn't running, or another program uses the port</td><td>Start OBS from the new shortcut → check the port matches the OBS option</td></tr>
+<tr><td>디버그 꺼짐 (debug off)</td><td>OBS runs without the debug option</td><td>Close OBS and start it from <strong>OBS Studio (Browser Click)</strong></td></tr>
+<tr><td>없음 (none)</td><td>That remote isn't open in OBS, or no action is chosen yet</td><td>Add the remote dock in OBS → choose an action in the settings screen</td></tr>
+<tr><td>⚠ (briefly)</td><td>The button wasn't found when pressed</td><td>Nothing was pressed. Check whether the remote's layout changed; for custom click, pick it again</td></tr>
+<tr><td>A picked point presses the wrong place</td><td>The dock or source was resized</td><td>Pick it again with [화면 불러오기]</td></tr>
+<tr><td>The page list is empty</td><td>OBS started without the option, or just started</td><td>[목록 새로고침]; if that doesn't help, see "debug off"</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>Contact</h2>
+<p>If you run into problems or have questions, contact the author (Kimtan2 / 김탄2).</p>
+<ul>
+<li><p>Discord: kimtan2</p></li>
+<li><p>Chzzk: 김탄2</p></li>
+</ul>
+<p>OBS and OBS Studio are trademarks of the OBS Project. Weflab, ci.me, Chzzk and Toonation are services of their respective companies. This plugin is an unofficial project not affiliated with any of them.</p>
+</section>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>OBS Browser Click Stream Deck プラグイン 取扱説明書</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<h1>OBS Browser Click Stream Deck プラグイン 取扱説明書</h1>
+<p><time datetime="2026-11-11">2026-11-11</time></p>
+<p>OBS のカスタムブラウザドックやブラウザソースの中にあるボタン(Weflab・ci.me・Chzzk・Toonation のリモコンなど)を Stream Deck のキーで押すプラグインです。「対話」ウィンドウを開く必要はなく、ドックが別のタブの後ろに隠れていても押せます。</p>
+<p>作者: <strong>ドクターゴブリン(닥터고블린)の Kimtan2(김탄2)</strong></p>
+<p>プラグインの設定画面は韓国語です。この説明書では、画面に表示される韓国語の項目名をそのまま書き、意味を添えています。</p>
+
+<section><h2>必要なもの</h2>
+<table><thead><tr><th>項目</th><th>必要なもの</th></tr></thead><tbody>
+<tr><td>パソコン</td><td>Windows 10 以降</td></tr>
+<tr><td>Stream Deck アプリ</td><td>Stream Deck ソフトウェア 7.3 以降</td></tr>
+<tr><td>OBS</td><td>OBS Studio(Windows 64 ビット)</td></tr>
+<tr><td>インストールファイル</td><td><code>OBS-Browser-Click.streamDeckPlugin</code></td></tr>
+</tbody></table>
+<p>押したいリモコン(Weflab、ci.me、Chzzk、Toonation)が、OBS に<strong>カスタムブラウザドック</strong>または<strong>ブラウザソース</strong>として開かれている必要があります。</p>
+</section>
+
+<section><h2>ステップ 1: プラグインのインストール</h2>
+<ol>
+<li><p><code>OBS-Browser-Click.streamDeckPlugin</code> をダブルクリックします。</p></li>
+<li><p>Stream Deck アプリが開き、インストールするか聞かれます。<strong>インストール</strong>を押します。上書きするか聞かれた場合もインストールを選びます。</p></li>
+<li><p>右側のアクション一覧に <strong>OBS Browser Click</strong> カテゴリが追加されたことを確認します。</p></li>
+</ol>
+</section>
+
+<section><h2>ステップ 2: OBS をデバッグオプション付きで起動</h2>
+<p>プラグインは OBS の<strong>リモートデバッグポート</strong>を通して OBS 内のページに入り、ボタンを押します。そのため OBS を <code>--remote-debugging-port=9222</code> オプション付きで起動する必要があります。ボタン一つでこのオプション付きのショートカットを作れます。</p>
+<ol>
+<li><p><strong>OBS Browser Click</strong> のアクションをどれか一つキーにドラッグし、クリックします。</p></li>
+<li><p>設定画面の一番下にある <strong>[OBS 바로가기 설정]</strong>(OBS ショートカット設定)を押します。</p></li>
+<li><p>デスクトップとスタートメニューに「OBS Studio (Browser Click)」を作ったというメッセージが出れば完了です。タスクバーに OBS をピン留めしている場合は、そのアイコンにもオプションが付きます。</p></li>
+<li><p>OBS を完全に終了し、新しくできた <strong>OBS Studio (Browser Click)</strong> ショートカット(またはタスクバーの OBS)から起動し直します。</p></li>
+</ol>
+<p><strong>注意:</strong> 元からある「OBS Studio」アイコン(共有デスクトップ、スタートメニュー)から起動すると、オプションは付きません。これらは OBS のアップデートのたびに作り直されるため、プラグインは変更しません。新しいショートカットはユーザーフォルダにあるので、OBS をアップデートしても消えません。</p>
+<p><strong>手動で付ける方法:</strong> OBS のショートカットを右クリック → プロパティ → <strong>リンク先</strong>の末尾に半角スペースを入れて <code>--remote-debugging-port=9222</code> を付けます。<strong>作業フォルダー</strong>は <code>C:\Program Files\obs-studio\bin\64bit</code> にします。</p>
+<p><strong>確認方法:</strong> キーに <strong>OFFLINE</strong> や <strong>디버그 꺼짐</strong>(デバッグオフ)が出なければ大丈夫です。ブラウザで <code>http://127.0.0.1:9222/json/list</code> を開き、ページ一覧が出ることでも確認できます。</p>
+</section>
+
+<section><h2>デバッグオプションについて知っておくこと</h2>
+<ul>
+<li><p><strong>この PC 内の他のプログラム</strong>は、OBS 内のページ(ログイン済みの Chzzk・ci.me スタジオ、Weflab リモコンなど)を見たり操作したりできます。インターネットや通常のブラウザの Web ページからは入れません(ポートはこの PC 内の <code>127.0.0.1</code> だけで開き、Web ページからの接続は OBS が拒否します)。知らないプログラムをインストールしないことが一番大切です。</p></li>
+<li><p><strong>ポートの競合:</strong> Chrome のデバッグモードなど、他のプログラムが同じポートを使うと、OBS がポートを開けないことがあります。ポートの先が OBS でない場合、プラグインは何も押さず、キーに OFFLINE を表示します。下の「設定」でポートを変え、[OBS 바로가기 설정] をもう一度押してください。</p></li>
+<li><p><strong>オプションなしで起動:</strong> 元のアイコンや他のプログラムから OBS を起動するとオプションが付きません。このときキーに <strong>디버그 꺼짐</strong>(デバッグオフ)が出ます。</p></li>
+<li><p><strong>OBS のアップデート:</strong> インストーラーが共有ショートカットを作り直します。新しいショートカットとタスクバーのアイコンはそのまま残りますが、もしオプションが消えていたら [OBS 바로가기 설정] をもう一度押してください。</p></li>
+<li><p><strong>パフォーマンス:</strong> 影響はほとんどありません。ポートは待っているだけで、プラグインは 1 秒に 1 回状態を確認します。</p></li>
+</ul>
+</section>
+
+<section><h2>ステップ 3: 最初のキーを作る</h2>
+<p>Weflab の投げ銭アラートをキー一つでスキップする例です。</p>
+<ol>
+<li><p>Weflab のダッシュボードでリモコンの URL をコピーし、OBS のメニュー <strong>ドック → カスタムブラウザドック</strong>に追加します(すでにあれば飛ばします)。</p></li>
+<li><p>アクション一覧の <strong>OBS Browser Click → 위플랩 리모컨</strong>(Weflab リモコン)をキーにドラッグします。</p></li>
+<li><p>設定画面の <strong>동작</strong>(動作)で <strong>알림 취소(넘기기)</strong>(アラート取り消し/スキップ)を選びます。</p></li>
+<li><p>キーに「알림 취소(넘기기)」と表示されます。アラートが出ているときに押すとスキップされます。</p></li>
+</ol>
+<p>最初は Weflab の <strong>테스트 알림</strong>(テストアラート)で確かめてみてください。</p>
+</section>
+
+<section><h2>アクション一覧</h2>
+<p>サービスごとにアクションが分かれています。キーに置いてから、設定画面の <strong>동작</strong>(動作)でリモコンのボタンを選びます。</p>
+<table class="name"><thead><tr><th>アクション</th><th>選べる動作</th></tr></thead><tbody>
+<tr><td>위플랩 리모컨<br>(Weflab リモコン)</td><td>アラート一時停止/再開 ●、アラート取り消し(スキップ)、アラートをすべて取り消し、一覧の更新、テストアラート、タイマー開始・停止・時間・アップタイム・削除、アバターゲーム開始・取り消し、電光掲示板の現在を取り消し・すべて取り消し、投票開始・中止・結果</td></tr>
+<tr><td>씨미 리모컨<br>(ci.me リモコン)</td><td>一時停止、スキップ、チャット・応援・動画・ミッション投げ銭のオン/オフ ●、ワープ: フォロワーのみ受け取る ●、視聴者を送る</td></tr>
+<tr><td>치지직 리모컨<br>(Chzzk リモコン)</td><td>TTS スキップ、アラート停止</td></tr>
+<tr><td>투네이션 리모컨<br>(Toonation リモコン)</td><td>アラート一時停止 ●、スキップ</td></tr>
+<tr><td>범용 클릭<br>(汎用クリック)</td><td>一覧にないボタンや画面の一点を自分で選ぶ(下記参照)</td></tr>
+</tbody></table>
+<p>● の付いた動作は、ページのオン/オフにキーが連動します。オンのときはキーの枠が水色になります。Stream Deck アプリでキーの下の 2 つの点(左がオフ、右がオン)を押すと、状態ごとにアイコンとタイトルを変えられます。</p>
+</section>
+
+<section><h2>汎用クリック(범용 클릭)</h2>
+<p>一覧にないボタンや、OBS 内の任意のページのボタンを押すときに使います。</p>
+<ol>
+<li><p><strong>페이지</strong>(ページ): OBS で開いているページを一つ選びます。OBS を起動した直後やドックを追加した後は <strong>[목록 새로고침]</strong>(一覧の更新)を押します。</p></li>
+<li><p><strong>방식</strong>(方式): <strong>버튼으로 찾기</strong>(ボタンで探す)か <strong>위치 찍기</strong>(位置を指定)を選びます。</p></li>
+<li><p><strong>ボタンで探す:</strong> <strong>버튼</strong>(ボタン)一覧にページのボタンが文字で表示されます。同じ文字が複数あると <code>시작 (2)</code> のように番号が付きます。文字のないアイコンボタンは <strong>CSS 선택자</strong>(CSS セレクター)に書きます(書くとボタン一覧より優先されます)。</p></li>
+<li><p><strong>位置を指定:</strong> <strong>[화면 불러오기]</strong>(画面の読み込み)を押すとページのキャプチャが出ます。押したい場所をクリックすると赤い点が付き、X、Y が入ります。</p></li>
+</ol>
+<p><strong>位置指定の注意:</strong> ドックやブラウザソースのサイズを変えると、同じ座標が別の場所を押すことがあります。サイズを変えた後は必ず [화면 불러오기] で位置を指定し直してください。クリックはそのページの中にだけ届き、実際のマウスカーソルは動きません。</p>
+</section>
+
+<section><h2>キーの表示</h2>
+<p>キーにはふだん選んだ動作の名前が出ます。Stream Deck アプリの<strong>タイトル</strong>欄に自分で文字を入れると、プラグインはそのタイトルを変えません。文字が切れる場合は、タイトル欄の横の <strong>T</strong> ボタンで文字を小さくしてください。</p>
+</section>
+
+<section><h2>設定</h2>
+<table class="name"><thead><tr><th>項目</th><th>初期値</th><th>意味</th></tr></thead><tbody>
+<tr><td>디버깅 포트<br>(デバッグポート)</td><td><code>9222</code>(空欄のとき)</td><td>OBS のオプションの数字と同じにします。すべてのアクションに共通です</td></tr>
+<tr><td>[OBS 바로가기 설정]</td><td></td><td>このポートで OBS を起動するショートカットを作ります。ポートを変えたらもう一度押してください</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>キーの表示とトラブルシューティング</h2>
+<table><thead><tr><th>表示 / 症状</th><th>意味</th><th>対処</th></tr></thead><tbody>
+<tr><td>OFFLINE</td><td>OBS が起動していない、または他のプログラムがポートを使っている</td><td>新しいショートカットで OBS を起動 → ポートが OBS のオプションと同じか確認</td></tr>
+<tr><td>디버그 꺼짐(デバッグオフ)</td><td>OBS がデバッグオプションなしで起動している</td><td>OBS を終了し、<strong>OBS Studio (Browser Click)</strong> から起動し直す</td></tr>
+<tr><td>없음(なし)</td><td>そのリモコンが OBS に開かれていない、または動作を選んでいない</td><td>OBS にリモコンのドックを追加 → 設定画面で動作を選ぶ</td></tr>
+<tr><td>⚠(一瞬表示)</td><td>押したときにボタンが見つからなかった</td><td>何も押されていません。リモコンの画面が変わっていないか確認し、汎用クリックなら選び直す</td></tr>
+<tr><td>位置指定で違う場所が押される</td><td>ドック・ソースのサイズが変わった</td><td>[화면 불러오기] で指定し直す</td></tr>
+<tr><td>ページ一覧が空</td><td>OBS がオプションなしで起動した、または起動直後</td><td>[목록 새로고침]、だめなら「デバッグオフ」の項目を確認</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>お問い合わせ</h2>
+<p>問題が起きたときや分からないことがあれば、作者(Kimtan2 / 김탄2)にお問い合わせください。</p>
+<ul>
+<li><p>Discord: kimtan2</p></li>
+<li><p>Chzzk: 김탄2</p></li>
+</ul>
+<p>OBS および OBS Studio は OBS Project の商標です。Weflab、ci.me、Chzzk、Toonation は各社のサービスです。このプラグインはこれらと関係のない非公式プロジェクトです。</p>
+</section>
+</body>
+</html>

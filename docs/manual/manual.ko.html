@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>OBS Browser Click 스트림덱 플러그인 사용설명서</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<h1>OBS Browser Click 스트림덱 플러그인 사용설명서</h1>
+<p><time datetime="2026-11-11">2026-11-11</time></p>
+<p>OBS의 사용자 지정 독과 브라우저 소스 안에 있는 버튼(위플랩·씨미·치지직·투네이션 리모컨 등)을 스트림덱 키로 누르는 플러그인입니다. 상호작용 창을 열지 않아도 되고, 독이 다른 탭 뒤에 숨어 있어도 눌립니다.</p>
+<p>만든 사람: <strong>닥터고블린 김탄2</strong></p>
+
+<section><h2>준비물</h2>
+<p>아래 네 가지가 갖춰져 있어야 합니다.</p>
+<table><thead><tr><th>항목</th><th>필요한 것</th></tr></thead><tbody>
+<tr><td>컴퓨터</td><td>Windows 10 이상</td></tr>
+<tr><td>스트림덱 프로그램</td><td>Stream Deck 소프트웨어 7.3 이상</td></tr>
+<tr><td>OBS</td><td>OBS Studio (Windows 64비트)</td></tr>
+<tr><td>설치 파일</td><td><code>OBS-Browser-Click.streamDeckPlugin</code></td></tr>
+</tbody></table>
+<p>누를 리모컨(위플랩, 씨미, 치지직, 투네이션)은 OBS에 <strong>사용자 지정 브라우저 독</strong>이나 <strong>브라우저 소스</strong>로 열려 있어야 합니다.</p>
+</section>
+
+<section><h2>1단계: 플러그인 설치</h2>
+<ol>
+<li><p><code>OBS-Browser-Click.streamDeckPlugin</code> 파일을 더블클릭합니다.</p></li>
+<li><p>스트림덱 프로그램이 열리면서 설치할지 물어봅니다. <strong>설치</strong>를 누릅니다. 이미 설치되어 있어 덮어쓸지 물으면 이때도 설치를 고르면 됩니다.</p></li>
+<li><p>스트림덱 프로그램 오른쪽 액션 목록에 <strong>OBS Browser Click</strong> 카테고리가 생겼는지 확인합니다.</p></li>
+</ol>
+</section>
+
+<section><h2>2단계: OBS를 디버깅 옵션으로 켜기</h2>
+<p>플러그인은 OBS의 <strong>원격 디버깅 포트</strong>로 OBS 안의 페이지에 들어가 버튼을 누릅니다. 그래서 OBS를 <code>--remote-debugging-port=9222</code> 옵션을 붙여 켜야 합니다. 버튼 하나로 이 옵션이 붙은 바로가기를 만들 수 있습니다.</p>
+<ol>
+<li><p>액션 목록의 <strong>OBS Browser Click</strong>에서 아무 액션이나 하나 키에 끌어다 놓고 클릭합니다.</p></li>
+<li><p>아래 설정 화면 맨 밑의 <strong>[OBS 바로가기 설정]</strong>을 누릅니다.</p></li>
+<li><p>"바탕화면·시작 메뉴에 'OBS Studio (Browser Click)'를 만들었어요"가 뜨면 끝입니다. 작업 표시줄에 OBS를 고정해 두었다면 그 아이콘에도 옵션이 붙습니다.</p></li>
+<li><p>OBS를 완전히 끄고, 새로 생긴 <strong>OBS Studio (Browser Click)</strong> 바로가기(또는 작업 표시줄의 OBS)로 다시 켭니다.</p></li>
+</ol>
+<p><strong>주의:</strong> 원래 있던 "OBS Studio" 아이콘(공용 바탕화면, 시작 메뉴)으로 켜면 옵션이 빠집니다. 그 아이콘은 OBS 업데이트 때 다시 만들어지기 때문에 플러그인이 고치지 않습니다. 새 바로가기는 내 사용자 폴더에 있어서 OBS를 업데이트해도 지워지지 않습니다.</p>
+<p><strong>손으로 붙이는 법:</strong> OBS 바로가기 → 오른쪽 클릭 → 속성 → <strong>대상</strong> 칸 맨 끝에 한 칸 띄우고 <code>--remote-debugging-port=9222</code>를 붙입니다. <strong>시작 위치</strong>는 <code>C:\Program Files\obs-studio\bin\64bit</code>여야 합니다.</p>
+<p><strong>잘 켜졌는지 확인하는 법:</strong> 키에 <strong>OFFLINE</strong>이나 <strong>디버그 꺼짐</strong>이 뜨지 않으면 됩니다. 브라우저 주소창에 <code>http://127.0.0.1:9222/json/list</code>를 열어 페이지 목록이 나와도 됩니다.</p>
+</section>
+
+<section><h2>디버깅 옵션을 켤 때 알아 둘 점</h2>
+<ul>
+<li><p><strong>이 PC 안의 다른 프로그램</strong>은 OBS 안의 페이지(로그인된 치지직·씨미 스튜디오, 위플랩 리모컨 등)를 보고 조작할 수 있습니다. 인터넷이나 일반 브라우저의 웹페이지에서는 들어올 수 없습니다(포트가 이 PC 안 <code>127.0.0.1</code>에만 열리고, 웹페이지의 접속은 OBS가 거절합니다). 모르는 프로그램을 설치하지 않는 것이 가장 중요합니다.</p></li>
+<li><p><strong>포트 충돌:</strong> 크롬 개발 모드처럼 다른 프로그램이 같은 포트를 쓰면 OBS가 포트를 열지 못할 수 있습니다. 플러그인은 포트 너머가 OBS가 아니면 아무것도 누르지 않고 키에 OFFLINE을 띄웁니다. 이때는 아래 "설정"에서 포트를 바꾸고 [OBS 바로가기 설정]을 다시 누르세요.</p></li>
+<li><p><strong>옵션 없이 켜짐:</strong> 원래 아이콘으로 켜거나 다른 프로그램이 OBS를 켜면 옵션이 빠집니다. 이때 키에 <strong>디버그 꺼짐</strong>이 뜹니다.</p></li>
+<li><p><strong>OBS 업데이트:</strong> 설치 프로그램이 공용 바로가기를 다시 만듭니다. 새 바로가기와 작업 표시줄 아이콘은 그대로 남지만, 혹시 옵션이 빠졌다면 [OBS 바로가기 설정]을 한 번 더 누르세요.</p></li>
+<li><p><strong>성능:</strong> 영향은 거의 없습니다. 포트는 기다리기만 하고, 플러그인은 1초에 한 번 상태를 확인합니다.</p></li>
+</ul>
+</section>
+
+<section><h2>3단계: 첫 키 만들어 보기</h2>
+<p>위플랩 후원 알림을 키 하나로 넘기는 예시입니다.</p>
+<ol>
+<li><p>위플랩 대시보드에서 리모컨 주소를 복사해 OBS 메뉴 <strong>독 → 사용자 지정 브라우저 독</strong>에 추가합니다(이미 있다면 건너뜁니다).</p></li>
+<li><p>액션 목록의 <strong>OBS Browser Click → 위플랩 리모컨</strong>을 키에 끌어다 놓습니다.</p></li>
+<li><p>아래 설정 화면의 <strong>동작</strong>에서 <strong>알림 취소(넘기기)</strong>를 고릅니다.</p></li>
+<li><p>키에 "알림 취소(넘기기)"가 뜹니다. 후원 알림이 나올 때 누르면 넘어갑니다.</p></li>
+</ol>
+<p>처음 써 볼 때는 위플랩의 <strong>테스트 알림</strong>으로 먼저 확인해 보세요.</p>
+</section>
+
+<section><h2>액션 목록</h2>
+<p>서비스마다 액션이 따로 있습니다. 키를 올린 뒤 설정 화면의 <strong>동작</strong>에서 그 리모컨의 버튼을 고릅니다.</p>
+<table class="name"><thead><tr><th>액션</th><th>고를 수 있는 동작</th></tr></thead><tbody>
+<tr><td>위플랩 리모컨</td><td>알림 일시정지/재개 ●, 알림 취소(넘기기), 알림 모두 취소, 목록 새로고침, 테스트 알림, 타이머 시작·정지·시간·업타임·삭제, 아바타 게임 시작·취소, 전광판 현재 취소·모두 취소, 투표 시작·중지·결과</td></tr>
+<tr><td>씨미 리모컨</td><td>일시정지, 건너뛰기, 채팅·응원·영상·미션 후원 켜기/끄기 ●, 워프: 팔로잉만 받기 ●, 시청자 보내기</td></tr>
+<tr><td>치지직 리모컨</td><td>TTS 넘기기, 알림 정지</td></tr>
+<tr><td>투네이션 리모컨</td><td>알림 일시정지 ●, 스킵</td></tr>
+<tr><td>범용 클릭</td><td>목록에 없는 버튼이나 화면의 한 지점을 직접 고르기 (아래 참고)</td></tr>
+</tbody></table>
+<p>● 표시가 있는 동작은 켜짐/꺼짐을 키가 따라갑니다. 켜져 있으면 키 테두리가 하늘색이 됩니다. 스트림덱 프로그램에서 키 아래의 점 두 개(왼쪽 꺼짐, 오른쪽 켜짐)를 눌러 상태별 아이콘과 제목을 따로 정할 수 있습니다.</p>
+</section>
+
+<section><h2>범용 클릭</h2>
+<p>목록에 없는 버튼을 누르거나, OBS 안 아무 페이지의 버튼을 누를 때 씁니다.</p>
+<ol>
+<li><p><strong>페이지</strong>: 지금 OBS에 열린 페이지 중 하나를 고릅니다. OBS를 방금 켰거나 독을 새로 추가했다면 <strong>[목록 새로고침]</strong>을 누릅니다.</p></li>
+<li><p><strong>방식</strong>에서 <strong>버튼으로 찾기</strong> 또는 <strong>위치 찍기</strong>를 고릅니다.</p></li>
+<li><p><strong>버튼으로 찾기</strong>: <strong>버튼</strong> 목록에 그 페이지의 버튼이 글자로 나옵니다. 같은 글자가 여럿이면 <code>시작 (2)</code>처럼 번호가 붙습니다. 글자가 없는 아이콘 버튼은 <strong>CSS 선택자</strong> 칸에 적습니다(적으면 위 버튼 선택보다 우선).</p></li>
+<li><p><strong>위치 찍기</strong>: <strong>[화면 불러오기]</strong>를 누르면 페이지 캡처가 뜹니다. 누를 곳을 찍으면 빨간 점과 X, Y 값이 채워집니다.</p></li>
+</ol>
+<p><strong>위치 찍기 주의:</strong> 독이나 브라우저 소스의 크기를 바꾸면 같은 좌표가 다른 곳을 누를 수 있습니다. 크기를 바꾼 뒤에는 꼭 [화면 불러오기]로 위치를 다시 찍어 주세요. 클릭은 그 페이지 안으로만 전달되고 실제 마우스 커서는 움직이지 않습니다.</p>
+</section>
+
+<section><h2>키 표시 바꾸기</h2>
+<p>키에는 평소 고른 동작 이름이 나옵니다. 스트림덱 프로그램의 <strong>제목</strong> 칸에 직접 글자를 넣으면 플러그인은 그 제목을 바꾸지 않습니다. 글자가 잘리면 제목 칸 옆의 <strong>T</strong> 버튼에서 글자 크기를 줄이세요.</p>
+</section>
+
+<section><h2>설정</h2>
+<table><thead><tr><th>항목</th><th>기본값</th><th>뜻</th></tr></thead><tbody>
+<tr><td>디버깅 포트</td><td><code>9222</code> (비워 두면)</td><td>OBS 옵션의 숫자와 같아야 합니다. 모든 액션에 같이 적용됩니다</td></tr>
+<tr><td>[OBS 바로가기 설정]</td><td></td><td>위 포트로 OBS를 켜는 바로가기를 만듭니다. 포트를 바꾸면 한 번 더 누르세요</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>키에 뜨는 표시와 문제 해결</h2>
+<table><thead><tr><th>표시 / 증상</th><th>뜻</th><th>할 일</th></tr></thead><tbody>
+<tr><td>OFFLINE</td><td>OBS가 꺼져 있거나, 포트를 다른 프로그램이 씀</td><td>OBS를 새 바로가기로 켜기 → 포트가 OBS 옵션과 같은지 확인</td></tr>
+<tr><td>디버그 꺼짐</td><td>OBS가 디버깅 옵션 없이 켜져 있음</td><td>OBS를 끄고 <strong>OBS Studio (Browser Click)</strong>로 다시 켜기</td></tr>
+<tr><td>없음</td><td>그 리모컨 페이지가 OBS에 없거나, 동작을 아직 안 고름</td><td>OBS에 리모컨 독 추가 → 설정 화면에서 동작 고르기</td></tr>
+<tr><td>⚠ (잠깐 뜸)</td><td>눌렀는데 버튼을 찾지 못함</td><td>아무것도 누르지 않은 것입니다. 리모컨 화면이 바뀌었는지 확인하고, 범용 클릭이면 다시 고르기</td></tr>
+<tr><td>위치 찍기가 엉뚱한 곳을 누름</td><td>독·소스 크기가 바뀜</td><td>[화면 불러오기]로 다시 찍기</td></tr>
+<tr><td>페이지 목록이 비어 있음</td><td>OBS가 옵션 없이 켜졌거나 방금 켜짐</td><td>[목록 새로고침], 안 되면 디버그 꺼짐 항목 확인</td></tr>
+</tbody></table>
+</section>
+
+<section><h2>문의하기</h2>
+<p>사용 중 문제가 있거나 궁금한 점이 있으면 만든 사람(김탄2)에게 문의해 주세요.</p>
+<ul>
+<li><p>Discord: kimtan2</p></li>
+<li><p>치지직(Chzzk): 김탄2</p></li>
+</ul>
+<p>OBS와 OBS Studio는 OBS Project의 상표입니다. 위플랩, 씨미, 치지직, 투네이션은 각 회사의 서비스입니다. 이 플러그인은 이들과 관계없는 비공식 프로젝트입니다.</p>
+</section>
+</body>
+</html>
