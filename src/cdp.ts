@@ -23,10 +23,17 @@ export function findPage(pages: CdpPage[], urlPart: string, host?: string): CdpP
 	return pages.find((p) => p.url.includes(urlPart) && (!host || hostOf(p.url) === host))
 }
 
+export interface CdpCall {
+	method: string
+	params?: object
+}
+
 // shortcut: 호출마다 새 WebSocket. 키가 많아져 느리면 페이지별 연결 유지로 바꿈
-export function evaluate(wsUrl: string, expression: string, timeoutMs = 2000): Promise<unknown> {
+/** Sends the calls one after another on one connection and resolves with each call's result, in order. */
+export function send(wsUrl: string, calls: CdpCall[], timeoutMs = 2000): Promise<unknown[]> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(wsUrl)
+		const results: unknown[] = []
 		const done = (fn: () => void) => {
 			clearTimeout(timer)
 			ws.removeAllListeners()
@@ -34,21 +41,58 @@ export function evaluate(wsUrl: string, expression: string, timeoutMs = 2000): P
 			ws.terminate()
 			fn()
 		}
+		const next = () => {
+			if (results.length === calls.length) return done(() => resolve(results))
+			const { method, params = {} } = calls[results.length]
+			ws.send(JSON.stringify({ id: results.length + 1, method, params }))
+		}
 		const timer = setTimeout(() => done(() => reject(new Error('CDP timeout'))), timeoutMs)
 		ws.on('error', (error) => done(() => reject(error)))
-		ws.on('open', () => {
-			ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true, userGesture: true } }))
-		})
+		ws.on('open', next)
 		ws.on('message', (data) => {
-			const msg = JSON.parse(String(data)) as {
-				id?: number
-				error?: { message: string }
-				result?: { result?: { value?: unknown }; exceptionDetails?: { text?: string } }
+			let msg: { id?: number; error?: { message: string }; result?: unknown }
+			try {
+				msg = JSON.parse(String(data))
+			} catch {
+				return // not a CDP reply
 			}
-			if (msg.id !== 1) return
+			if (msg.id !== results.length + 1) return
 			if (msg.error) return done(() => reject(new Error(msg.error?.message)))
-			if (msg.result?.exceptionDetails) return done(() => reject(new Error(msg.result?.exceptionDetails?.text ?? 'page exception')))
-			done(() => resolve(msg.result?.result?.value))
+			results.push(msg.result)
+			next()
 		})
 	})
+}
+
+type EvalResult = { result?: { value?: unknown }; exceptionDetails?: { text?: string } }
+
+export async function evaluate(wsUrl: string, expression: string, timeoutMs = 2000): Promise<unknown> {
+	const [r] = (await send(wsUrl, [{ method: 'Runtime.evaluate', params: { expression, returnByValue: true, userGesture: true } }], timeoutMs)) as EvalResult[]
+	if (r?.exceptionDetails) throw new Error(r.exceptionDetails.text ?? 'page exception')
+	return r?.result?.value
+}
+
+const SIZE = '({ width: innerWidth, height: innerHeight })'
+type Size = { width: number; height: number }
+
+export async function screenshot(wsUrl: string): Promise<Size & { data: string }> {
+	const [size, shot] = await send(wsUrl, [
+		{ method: 'Runtime.evaluate', params: { expression: SIZE, returnByValue: true } },
+		{ method: 'Page.captureScreenshot', params: { format: 'jpeg', quality: 70 } },
+	])
+	const { width, height } = (size as EvalResult).result?.value as Size
+	return { data: (shot as { data: string }).data, width, height }
+}
+
+/** A real mouse click at page coordinates, delivered to this page only; refuses points outside its current size. */
+export async function clickAt(wsUrl: string, x: number, y: number): Promise<'ok' | 'outside'> {
+	const { width, height } = (await evaluate(wsUrl, SIZE)) as Size
+	if (!(x >= 0 && x < width && y >= 0 && y < height)) return 'outside'
+	const button = { button: 'left', clickCount: 1 }
+	await send(wsUrl, [
+		{ method: 'Input.dispatchMouseEvent', params: { type: 'mouseMoved', x, y } },
+		{ method: 'Input.dispatchMouseEvent', params: { type: 'mousePressed', x, y, ...button } },
+		{ method: 'Input.dispatchMouseEvent', params: { type: 'mouseReleased', x, y, ...button } },
+	])
+	return 'ok'
 }

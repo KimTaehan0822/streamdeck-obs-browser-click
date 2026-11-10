@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { listPages, findPage, evaluate } from '../dist/cdp.js'
+import { listPages, findPage, evaluate, send, screenshot, clickAt } from '../dist/cdp.js'
 import { fakeCdp } from './fake-cdp.mjs'
 
 const TARGETS = [
@@ -68,6 +68,70 @@ test('evaluate rejects on exception', async () => {
 	const cdp = await fakeCdp({ reply: () => ({ result: { result: { type: 'object' }, exceptionDetails: { text: 'boom' } } }) })
 	try {
 		await assert.rejects(evaluate(cdp.wsUrl('a'), 'throw 1'))
+	} finally {
+		await cdp.close()
+	}
+})
+
+// Answers Runtime.evaluate with a 300×200 viewport and Page/Input calls with an empty result.
+const pageReply = (msg) => {
+	if (msg.method === 'Runtime.evaluate') return { result: { result: { value: { width: 300, height: 200 } } } }
+	if (msg.method === 'Page.captureScreenshot') return { result: { data: 'SlBFRw==' } }
+	return { result: {} }
+}
+
+test('send returns results in order', async () => {
+	const cdp = await fakeCdp({ reply: (m) => ({ result: { n: m.params.n } }) })
+	try {
+		assert.deepEqual(await send(cdp.wsUrl('a'), [{ method: 'A', params: { n: 1 } }, { method: 'B', params: { n: 2 } }]), [{ n: 1 }, { n: 2 }])
+		assert.deepEqual(cdp.received.map((m) => m.method), ['A', 'B'])
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('send rejects on error', async () => {
+	const cdp = await fakeCdp({ reply: () => ({ error: { message: 'nope' } }) })
+	try {
+		await assert.rejects(send(cdp.wsUrl('a'), [{ method: 'A' }]), /nope/)
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('screenshot returns jpeg and size', async () => {
+	const cdp = await fakeCdp({ reply: pageReply })
+	try {
+		assert.deepEqual(await screenshot(cdp.wsUrl('a')), { data: 'SlBFRw==', width: 300, height: 200 })
+		const shot = cdp.received.find((m) => m.method === 'Page.captureScreenshot')
+		assert.deepEqual(shot.params, { format: 'jpeg', quality: 70 })
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('clickAt sends move press release', async () => {
+	const cdp = await fakeCdp({ reply: pageReply })
+	try {
+		assert.equal(await clickAt(cdp.wsUrl('a'), 60, 108), 'ok')
+		const mouse = cdp.received.filter((m) => m.method === 'Input.dispatchMouseEvent').map((m) => m.params)
+		assert.deepEqual(mouse, [
+			{ type: 'mouseMoved', x: 60, y: 108 },
+			{ type: 'mousePressed', x: 60, y: 108, button: 'left', clickCount: 1 },
+			{ type: 'mouseReleased', x: 60, y: 108, button: 'left', clickCount: 1 },
+		])
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('clickAt refuses outside', async () => {
+	const cdp = await fakeCdp({ reply: pageReply })
+	try {
+		assert.equal(await clickAt(cdp.wsUrl('a'), 300, 10), 'outside')
+		assert.equal(await clickAt(cdp.wsUrl('a'), 10, 200), 'outside')
+		assert.equal(await clickAt(cdp.wsUrl('a'), -1, 10), 'outside')
+		assert.equal(cdp.received.filter((m) => m.method.startsWith('Input.')).length, 0)
 	} finally {
 		await cdp.close()
 	}
