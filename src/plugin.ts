@@ -1,5 +1,6 @@
 import streamDeck from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
+import { setupShortcuts } from './shortcut.js'
 import { buttonItems, createClicker, CustomClickAction, pageItems, presetItemsFor, SERVICE_ACTIONS, ServiceRemoteAction, shotItem } from './actions.js'
 
 // The Stream Deck app keeps no console output; send errors to the plugin's logs folder instead.
@@ -28,6 +29,9 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 	} else if (payload.event === 'getShot') {
 		const shot = await shotItem(clicker, typeof payload.pageUrl === 'string' ? payload.pageUrl : '')
 		return void streamDeck.ui.sendToPropertyInspector({ event: 'getShot', ...shot } as JsonObject).catch(() => {})
+	} else if (payload.event === 'setupShortcut') {
+		const result = await setupShortcuts(port)
+		return void streamDeck.ui.sendToPropertyInspector({ event: 'setupShortcut', ...result } as JsonObject).catch(() => {})
 	} else return
 	streamDeck.ui.sendToPropertyInspector({ event: payload.event, items } as JsonObject).catch(() => {})
 })

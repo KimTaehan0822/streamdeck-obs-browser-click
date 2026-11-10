@@ -19,6 +19,8 @@
 	<hr />
 	<sdpi-item label="디버깅 포트"><sdpi-textfield setting="port" global placeholder="9222" pattern="^[0-9]{0,5}$"></sdpi-textfield></sdpi-item>
 	<div class="hint">OBS를 --remote-debugging-port=9222 옵션으로 켜야 동작합니다.</div>
+	<sdpi-item label=""><button type="button" class="tb-btn" id="shortcut">OBS 바로가기 설정</button></sdpi-item>
+	<div class="hint" id="shortcut-status" role="status">바탕화면과 시작 메뉴에 디버깅 옵션이 붙은 OBS 바로가기를 만들어요.</div>
 	<script>
 		// One page for both actions; the action UUID picks the fields. Lists come from the plugin (src/plugin.ts).
 		const REMOTE = `
@@ -42,6 +44,24 @@
 				<sdpi-item label="Y"><sdpi-textfield id="py" setting="pointY" pattern="^[0-9]*$" placeholder="찍으면 채워져요"></sdpi-textfield></sdpi-item>
 			</div>`
 
+		// The plugin answers { event: 'setupShortcut', ok, taskbar, reason } (src/shortcut.ts).
+		function setupShortcutButton(client) {
+			const status = document.getElementById('shortcut-status')
+			const button = document.getElementById('shortcut')
+			button.addEventListener('click', () => {
+				button.disabled = true
+				status.textContent = '만드는 중…'
+				client.send('sendToPlugin', { event: 'setupShortcut' })
+			})
+			client.sendToPropertyInspector.subscribe((ev) => {
+				const r = ev.payload
+				if (r?.event !== 'setupShortcut') return
+				button.disabled = false
+				if (!r.ok) return void (status.textContent = r.reason === 'noObs' ? 'OBS를 찾지 못했어요. OBS Studio가 설치되어 있는지 확인하세요.' : '바로가기를 만들지 못했어요. 잠시 뒤 다시 눌러 보세요.')
+				status.textContent = "바탕화면·시작 메뉴에 'OBS Studio (Browser Click)'를 만들었어요." + (r.taskbar ? ' 작업 표시줄의 OBS에도 옵션을 붙였어요.' : '') + ' 이제 OBS를 끄고 이 바로가기로 다시 켜세요.'
+			})
+		}
+
 		async function main() {
 			const client = SDPIComponents.streamDeckClient
 			const { actionInfo } = await client.getConnectionInfo()
@@ -54,6 +74,7 @@
 			await Promise.all([...fields.querySelectorAll('[setting]')].map((e) => e.updateComplete))
 			const { settings } = await client.getSettings()
 			await client.getGlobalSettings()
+			setupShortcutButton(client)
 			if (!custom) return
 			const $ = (id) => document.getElementById(id)
 			const askButtons = (pageUrl) => client.send('sendToPlugin', { event: 'getButtons', pageUrl })
