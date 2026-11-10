@@ -9,7 +9,7 @@ import {
 import type { JsonObject } from '@elgato/utils'
 import { clickAt, evaluate, findPage, listPages, screenshot, type CdpPage } from './cdp.js'
 import { pageExpression, type ListItem, type Target } from './page-script.js'
-import { PRESETS, presetById } from './presets.js'
+import { PRESETS, presetById, type Service } from './presets.js'
 
 /** The OBS side, swappable in tests. */
 export interface Clicker {
@@ -175,13 +175,30 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 
 type RemoteSettings = { preset?: string }
 
-export class RemoteButtonAction extends ClickAction<RemoteSettings> {
-	override readonly manifestId = 'com.haeunga0822.obs-browser-click.remote-button'
+/** One Stream Deck action per remote, so each settings list shows only that service (same order as the manifest). */
+export const SERVICE_ACTIONS: readonly { service: Service; uuid: string; name: string }[] = [
+	{ service: '위플랩', uuid: 'com.haeunga0822.obs-browser-click.remote-weflab', name: '위플랩 리모컨' },
+	{ service: '씨미', uuid: 'com.haeunga0822.obs-browser-click.remote-cime', name: '씨미 리모컨' },
+	{ service: '치지직', uuid: 'com.haeunga0822.obs-browser-click.remote-chzzk', name: '치지직 리모컨' },
+	{ service: '투네이션', uuid: 'com.haeunga0822.obs-browser-click.remote-toonation', name: '투네이션 리모컨' },
+]
+
+export class ServiceRemoteAction extends ClickAction<RemoteSettings> {
+	override readonly manifestId: string
+
+	constructor(clicker: Clicker, private readonly service: Service) {
+		super(clicker)
+		this.manifestId = SERVICE_ACTIONS.find((a) => a.service === service)?.uuid ?? ''
+	}
+	private preset(s: RemoteSettings) {
+		const p = presetById(s.preset ?? '')
+		return p?.service === this.service ? p : undefined
+	}
 	protected targetOf(s: RemoteSettings): Target | undefined {
-		return presetById(s.preset ?? '')?.target
+		return this.preset(s)?.target
 	}
 	protected labelOf(s: RemoteSettings): string {
-		return presetById(s.preset ?? '')?.label ?? ''
+		return this.preset(s)?.label ?? ''
 	}
 }
 
@@ -240,14 +257,10 @@ export async function shotItem(
 
 type Item = { value: string; label: string }
 
-export function presetItems(): { label: string; children: Item[] }[] {
-	const groups: { label: string; children: Item[] }[] = []
-	for (const p of PRESETS) {
-		let group = groups.find((g) => g.label === p.service)
-		if (!group) groups.push((group = { label: p.service, children: [] }))
-		group.children.push({ value: p.id, label: p.label })
-	}
-	return groups
+/** The presets of the remote action with this UUID; empty for any other action. */
+export function presetItemsFor(manifestId: string): Item[] {
+	const service = SERVICE_ACTIONS.find((a) => a.uuid === manifestId)?.service
+	return PRESETS.filter((p) => p.service === service).map((p) => ({ value: p.id, label: p.label }))
 }
 
 export async function pageItems(clicker: Clicker): Promise<Item[]> {

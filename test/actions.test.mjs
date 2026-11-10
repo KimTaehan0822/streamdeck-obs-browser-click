@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { RemoteButtonAction, CustomClickAction, customTarget, presetItems, pageItems, buttonItems, pointOf, shotItem } from '../dist/actions.js'
+import { CustomClickAction, ServiceRemoteAction, SERVICE_ACTIONS, customTarget, presetItemsFor, pageItems, buttonItems, pointOf, shotItem } from '../dist/actions.js'
 import { pageExpression } from '../dist/page-script.js'
 import { presetById } from '../dist/presets.js'
 import { fakeAction, fakeClicker, PAGES } from './fake-action.mjs'
@@ -10,8 +10,9 @@ const shown = []
 test.afterEach(() => {
 	for (const { a, f } of shown.splice(0)) a.onWillDisappear(f.ev())
 })
+// A service remote key gets the service of its preset (위플랩 for an unknown one).
 async function appear(Action, clicker, settings, id = 'k' + shown.length) {
-	const a = new Action(clicker)
+	const a = Action === ServiceRemoteAction ? new Action(clicker, presetById(settings.preset ?? '')?.service ?? '위플랩') : new Action(clicker)
 	const f = fakeAction(id, settings)
 	await a.onWillAppear(f.ev())
 	shown.push({ a, f })
@@ -20,7 +21,7 @@ async function appear(Action, clicker, settings, id = 'k' + shown.length) {
 
 test('press clicks preset', async () => {
 	const c = fakeClicker({ pages: PAGES })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'toonation-skip' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'toonation-skip' })
 	c.evaluated.length = 0
 	await a.onKeyDown(f.ev())
 	assert.deepEqual(c.evaluated, [{ wsUrl: 'ws://t', expr: pageExpression(presetById('toonation-skip').target, 'click') }])
@@ -29,7 +30,7 @@ test('press clicks preset', async () => {
 
 test('press while offline alerts', async () => {
 	const c = fakeClicker({ pages: PAGES, offline: true })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'toonation-skip' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'toonation-skip' })
 	await a.onKeyDown(f.ev())
 	assert.equal(f.calls.alerts, 1)
 	assert.equal(f.calls.titles.at(-1), 'OFFLINE')
@@ -38,7 +39,7 @@ test('press while offline alerts', async () => {
 
 test('unknown preset alerts', async () => {
 	const c = fakeClicker({ pages: PAGES })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'gone' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'gone' })
 	await a.onKeyDown(f.ev())
 	assert.equal(c.evaluated.length, 0)
 	assert.equal(f.calls.alerts, 1)
@@ -47,7 +48,7 @@ test('unknown preset alerts', async () => {
 
 test('missing page alerts', async () => {
 	const c = fakeClicker({ pages: [PAGES[1]] })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	assert.equal(f.calls.titles.at(-1), '없음')
 	await a.onKeyDown(f.ev())
 	assert.equal(c.evaluated.length, 0)
@@ -56,21 +57,21 @@ test('missing page alerts', async () => {
 
 test('missing button alerts', async () => {
 	const c = fakeClicker({ pages: PAGES, answer: () => 'missing' })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	await a.onKeyDown(f.ev())
 	assert.equal(f.calls.alerts, 1)
 })
 
 test('page error alerts', async () => {
 	const c = fakeClicker({ pages: PAGES, answer: () => Promise.reject(new Error('CDP timeout')) })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	await a.onKeyDown(f.ev())
 	assert.equal(f.calls.alerts, 1)
 })
 
 test('shows the preset label when the page is there', async () => {
 	const c = fakeClicker({ pages: PAGES })
-	const { f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	assert.deepEqual(f.calls.titles, ['알림 취소(넘기기)'])
 	assert.equal(c.evaluated.length, 0, 'a key without a toggle only checks the page exists')
 })
@@ -78,7 +79,7 @@ test('shows the preset label when the page is there', async () => {
 test('toggle follows page', async () => {
 	let state = 'on'
 	const c = fakeClicker({ pages: PAGES, answer: (expr) => (expr.includes('"state"') ? state : 'ok') })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-pause' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-pause' })
 	assert.deepEqual(f.calls.states, [1])
 	await a.poll()
 	assert.deepEqual(f.calls.states, [1], 'same state is not resent')
@@ -89,7 +90,7 @@ test('toggle follows page', async () => {
 
 test('user title is kept', async () => {
 	const c = fakeClicker({ pages: PAGES, offline: true })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	const before = f.calls.titles.length
 	a.onTitleParametersDidChange(f.ev({ title: '스킵!', state: 0, titleParameters: { showTitle: true } }))
 	c.offline = false
@@ -103,7 +104,7 @@ test('user title is kept', async () => {
 
 test('our own title echo is not a user title', async () => {
 	const c = fakeClicker({ pages: PAGES })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' })
 	a.onTitleParametersDidChange(f.ev({ title: '알림 취소(넘기기)', state: 0, titleParameters: { showTitle: true } }))
 	c.offline = true
 	await a.poll()
@@ -126,15 +127,6 @@ test('custom click presses the chosen button', async () => {
 	assert.equal(f.calls.titles.at(-1), '스킵')
 	await a.onKeyDown(f.ev())
 	assert.deepEqual(c.evaluated.at(-1), { wsUrl: 'ws://t', expr: pageExpression({ url: 'https://toon.at/widget/controller/key', text: '스킵', index: 0 }, 'click') })
-})
-
-test('getPresets groups by service', () => {
-	const groups = presetItems()
-	assert.deepEqual(groups.map((g) => g.label), ['위플랩', '씨미', '치지직', '투네이션'])
-	assert.deepEqual(groups[3].children, [
-		{ value: 'toonation-pause', label: '알림 일시정지' },
-		{ value: 'toonation-skip', label: '스킵' },
-	])
 })
 
 test('getPages lists titles and urls', async () => {
@@ -168,7 +160,7 @@ test('press finds the page by host too', async () => {
 	const other = { id: 'x', type: 'page', title: 'x', url: 'https://example.com/rcs/a', webSocketDebuggerUrl: 'ws://x' }
 	const cime = { id: 'c', type: 'page', title: '씨미', url: 'https://studio.ci.me/1/rc', webSocketDebuggerUrl: 'ws://c' }
 	const c = fakeClicker({ pages: [other, cime] })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'cime-skip' })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'cime-skip' })
 	await a.onKeyDown(f.ev())
 	assert.equal(c.evaluated.at(-1).wsUrl, 'ws://c')
 })
@@ -232,9 +224,54 @@ test('getShot without page', async () => {
 	assert.deepEqual(await shotItem(c, ''), { ok: false })
 })
 
+const UUID = (s) => `com.haeunga0822.obs-browser-click.${s}`
+
+test('one remote action per service', () => {
+	assert.deepEqual(
+		SERVICE_ACTIONS.map((a) => [a.service, a.uuid]),
+		[
+			['위플랩', UUID('remote-weflab')],
+			['씨미', UUID('remote-cime')],
+			['치지직', UUID('remote-chzzk')],
+			['투네이션', UUID('remote-toonation')],
+		],
+	)
+	assert.equal(new ServiceRemoteAction(fakeClicker(), '씨미').manifestId, UUID('remote-cime'))
+})
+
+test('a service action presses its own presets only', async () => {
+	const c = fakeClicker({ pages: PAGES })
+	const own = await appear(ServiceRemoteAction, c, { preset: 'toonation-skip' })
+	assert.equal(own.f.calls.titles.at(-1), '스킵')
+	const a = new ServiceRemoteAction(c, '위플랩')
+	const f = fakeAction('w-other', { preset: 'toonation-skip' })
+	await a.onWillAppear(f.ev())
+	shown.push({ a, f })
+	assert.equal(f.calls.titles.at(-1), '없음')
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+})
+
+test('getPresets lists only the action service', () => {
+	assert.deepEqual(presetItemsFor(UUID('remote-chzzk')), [
+		{ value: 'chzzk-tts-skip', label: 'TTS 넘기기' },
+		{ value: 'chzzk-alert-stop', label: '알림 정지' },
+	])
+	assert.deepEqual(presetItemsFor(UUID('custom-click')), [])
+})
+
+test('manifest has the four service actions and no old remote button', async () => {
+	const { readFileSync } = await import('node:fs')
+	const manifest = JSON.parse(readFileSync(new URL('../com.haeunga0822.obs-browser-click.sdPlugin/manifest.json', import.meta.url), 'utf8'))
+	const byUuid = Object.fromEntries(manifest.Actions.map((a) => [a.UUID, a]))
+	for (const s of SERVICE_ACTIONS) assert.equal(byUuid[s.uuid]?.Name, s.name, s.uuid)
+	assert.equal(byUuid[UUID('remote-button')], undefined)
+	assert.deepEqual(Object.keys(byUuid).sort(), [...SERVICE_ACTIONS.map((s) => s.uuid), UUID('custom-click')].sort())
+})
+
 test('timer stops', async () => {
 	const c = fakeClicker({ pages: PAGES })
-	const { a, f } = await appear(RemoteButtonAction, c, { preset: 'weflab-cancel' }, 'lonely')
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'weflab-cancel' }, 'lonely')
 	shown.pop()
 	a.onWillDisappear(f.ev())
 	assert.equal(a.polling, false)

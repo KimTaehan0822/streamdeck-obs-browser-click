@@ -1,6 +1,6 @@
 import streamDeck from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
-import { buttonItems, createClicker, CustomClickAction, pageItems, presetItems, RemoteButtonAction, shotItem } from './actions.js'
+import { buttonItems, createClicker, CustomClickAction, pageItems, presetItemsFor, SERVICE_ACTIONS, ServiceRemoteAction, shotItem } from './actions.js'
 
 // The Stream Deck app keeps no console output; send errors to the plugin's logs folder instead.
 console.error = (...args: unknown[]) => streamDeck.logger.error(args.map(String).join(' '))
@@ -19,7 +19,7 @@ function applyGlobal(settings: JsonObject): void {
 streamDeck.ui.onSendToPlugin(async (ev) => {
 	const payload = (ev.payload ?? {}) as { event?: unknown; pageUrl?: unknown }
 	let items: unknown
-	if (payload.event === 'getPresets') items = presetItems()
+	if (payload.event === 'getPresets') items = presetItemsFor(ev.action.manifestId)
 	else if (payload.event === 'getPages') items = await pageItems(clicker)
 	else if (payload.event === 'getButtons') {
 		const settings: JsonObject = await ev.action.getSettings().catch(() => ({}))
@@ -33,7 +33,7 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 })
 
 streamDeck.settings.onDidReceiveGlobalSettings((ev) => applyGlobal(ev.settings))
-streamDeck.actions.registerAction(new RemoteButtonAction(clicker))
+for (const { service } of SERVICE_ACTIONS) streamDeck.actions.registerAction(new ServiceRemoteAction(clicker, service))
 streamDeck.actions.registerAction(new CustomClickAction(clicker))
 await streamDeck.connect()
 applyGlobal(await streamDeck.settings.getGlobalSettings())

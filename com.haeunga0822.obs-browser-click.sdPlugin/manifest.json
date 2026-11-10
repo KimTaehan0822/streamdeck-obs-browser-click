@@ -24,24 +24,99 @@
 	},
 	"Actions": [
 		{
-			"Name": "리모컨 버튼",
-			"UUID": "com.haeunga0822.obs-browser-click.remote-button",
+			"Name": "위플랩 리모컨",
+			"UUID": "com.haeunga0822.obs-browser-click.remote-weflab",
 			"Icon": "imgs/key-off",
-			"Tooltip": "위플랩·씨미·치지직·투네이션 리모컨 버튼",
-			"Controllers": ["Keypad"],
+			"Tooltip": "위플랩 리모컨 버튼을 누릅니다",
+			"Controllers": [
+				"Keypad"
+			],
 			"DisableAutomaticStates": true,
 			"PropertyInspectorPath": "ui/click.html",
-			"States": [{ "Image": "imgs/key-off" }, { "Image": "imgs/key-on" }]
+			"States": [
+				{
+					"Image": "imgs/key-off"
+				},
+				{
+					"Image": "imgs/key-on"
+				}
+			]
+		},
+		{
+			"Name": "씨미 리모컨",
+			"UUID": "com.haeunga0822.obs-browser-click.remote-cime",
+			"Icon": "imgs/key-off",
+			"Tooltip": "씨미 리모컨 버튼을 누릅니다",
+			"Controllers": [
+				"Keypad"
+			],
+			"DisableAutomaticStates": true,
+			"PropertyInspectorPath": "ui/click.html",
+			"States": [
+				{
+					"Image": "imgs/key-off"
+				},
+				{
+					"Image": "imgs/key-on"
+				}
+			]
+		},
+		{
+			"Name": "치지직 리모컨",
+			"UUID": "com.haeunga0822.obs-browser-click.remote-chzzk",
+			"Icon": "imgs/key-off",
+			"Tooltip": "치지직 리모컨 버튼을 누릅니다",
+			"Controllers": [
+				"Keypad"
+			],
+			"DisableAutomaticStates": true,
+			"PropertyInspectorPath": "ui/click.html",
+			"States": [
+				{
+					"Image": "imgs/key-off"
+				},
+				{
+					"Image": "imgs/key-on"
+				}
+			]
+		},
+		{
+			"Name": "투네이션 리모컨",
+			"UUID": "com.haeunga0822.obs-browser-click.remote-toonation",
+			"Icon": "imgs/key-off",
+			"Tooltip": "투네이션 리모컨 버튼을 누릅니다",
+			"Controllers": [
+				"Keypad"
+			],
+			"DisableAutomaticStates": true,
+			"PropertyInspectorPath": "ui/click.html",
+			"States": [
+				{
+					"Image": "imgs/key-off"
+				},
+				{
+					"Image": "imgs/key-on"
+				}
+			]
 		},
 		{
 			"Name": "범용 클릭",
 			"UUID": "com.haeunga0822.obs-browser-click.custom-click",
 			"Icon": "imgs/key-off",
 			"Tooltip": "OBS 안 아무 페이지의 버튼",
-			"Controllers": ["Keypad"],
+			"Controllers": [
+				"Keypad"
+			],
 			"DisableAutomaticStates": true,
 			"PropertyInspectorPath": "ui/click.html",
-			"States": [{ "Image": "imgs/key-off" }, { "Image": "imgs/key-on" }]
+			"States": [
+				{
+					"Image": "imgs/key-off"
+				},
+				{
+					"Image": "imgs/key-on"
+				}
+			]
 		}
 	]
 }
