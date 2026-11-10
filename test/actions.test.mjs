@@ -37,6 +37,23 @@ test('press while offline alerts', async () => {
 	assert.equal(c.evaluated.length, 0)
 })
 
+test('debug off shows on keys', async () => {
+	const c = fakeClicker({ pages: PAGES, offline: true, obs: true })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'toonation-skip' })
+	assert.equal(f.calls.titles.at(-1), '디버그\n꺼짐')
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+	assert.equal(c.evaluated.length, 0)
+})
+
+test('OBS closed stays OFFLINE', async () => {
+	const c = fakeClicker({ pages: PAGES, offline: true, obs: true })
+	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'toonation-skip' })
+	c.obs = false
+	await a.poll()
+	assert.equal(f.calls.titles.at(-1), 'OFFLINE')
+})
+
 test('unknown preset alerts', async () => {
 	const c = fakeClicker({ pages: PAGES })
 	const { a, f } = await appear(ServiceRemoteAction, c, { preset: 'gone' })

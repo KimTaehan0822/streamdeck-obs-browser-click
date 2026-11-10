@@ -9,7 +9,11 @@ export interface CdpPage {
 	webSocketDebuggerUrl: string
 }
 
+/** Lists OBS's pages; refuses a port held by something else (Chrome in debug mode, another app) so nothing there is clicked. */
 export async function listPages(port: number): Promise<CdpPage[]> {
+	const version = await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(2000) })
+	const { 'User-Agent': agent } = (await version.json()) as { 'User-Agent'?: string }
+	if (!agent?.includes('OBS/')) throw new Error('port is not OBS')
 	const res = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2000) })
 	if (!res.ok) throw new Error(`json/list ${res.status}`)
 	const all = (await res.json()) as CdpPage[]

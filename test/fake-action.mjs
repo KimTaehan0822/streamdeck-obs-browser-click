@@ -15,7 +15,7 @@ export function fakeAction(id, settings = {}) {
 }
 
 /** A Clicker whose pages and page answers the test sets; records every evaluate. */
-export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok' } = {}) {
+export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok', obs = false } = {}) {
 	const evaluated = []
 	const clicked = []
 	const shots = []
@@ -34,6 +34,8 @@ export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, 
 		pages,
 		set offline(v) { offline = v },
 		set answer(fn) { answer = fn },
+		set obs(v) { obs = v },
+		obsRunning: async () => obs,
 		port: () => 9222,
 		listPages: async () => {
 			if (offline) throw new Error('ECONNREFUSED')

@@ -30,6 +30,15 @@ test('rejects when port closed', async () => {
 	await assert.rejects(listPages(port))
 })
 
+test('not OBS is offline', async () => {
+	const cdp = await fakeCdp({ targets: TARGETS, userAgent: 'Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36' })
+	try {
+		await assert.rejects(listPages(cdp.port), /port is not OBS/)
+	} finally {
+		await cdp.close()
+	}
+})
+
 test('findPage matches substring, first wins', () => {
 	const pages = [
 		{ id: '1', type: 'page', title: 'x', url: 'https://weflab.com/alertlist?mode=remote', webSocketDebuggerUrl: 'ws://1' },

@@ -7,6 +7,7 @@ import {
 	type WillDisappearEvent,
 } from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
+import { execFile } from 'node:child_process'
 import { clickAt, evaluate, findPage, listPages, screenshot, type CdpPage } from './cdp.js'
 import { pageExpression, type ListItem, type Target } from './page-script.js'
 import { PRESETS, presetById, type Service } from './presets.js'
@@ -18,17 +19,32 @@ export interface Clicker {
 	evaluate(wsUrl: string, expr: string): Promise<unknown>
 	clickAt(wsUrl: string, x: number, y: number): Promise<'ok' | 'outside'>
 	screenshot(wsUrl: string): Promise<{ data: string; width: number; height: number }>
+	/** Whether obs64.exe runs, asked only when the port does not answer. */
+	obsRunning(): Promise<boolean>
 }
 
+export const OBS_CHECK_MS = 5000
+
 export function createClicker(port: () => number): Clicker {
-	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot }
+	let checked = 0
+	let running = Promise.resolve(false)
+	const obsRunning = () => {
+		if (Date.now() - checked < OBS_CHECK_MS) return running
+		checked = Date.now()
+		running = new Promise((resolve) =>
+			execFile('tasklist', ['/FI', 'IMAGENAME eq obs64.exe', '/NH'], { windowsHide: true, timeout: 3000 }, (error, out) => resolve(!error && /obs64\.exe/i.test(out))),
+		)
+		return running
+	}
+	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot, obsRunning }
 }
 
 export const POLL_MS = 1000
 const OFFLINE = 'OFFLINE'
 const MISSING = '없음'
+const DEBUG_OFF = '디버그\n꺼짐'
 
-type Status = 'ok' | 'offline' | 'missing'
+type Status = 'ok' | 'offline' | 'missing' | 'debugOff'
 type KeyAction = KeyDownEvent<JsonObject>['action']
 
 interface Instance<S> {
@@ -104,7 +120,7 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 		try {
 			pages = await this.clicker.listPages()
 		} catch {
-			return void (this.show(instance, 'offline'), alert())
+			return void (this.show(instance, await this.offlineStatus()), alert())
 		}
 		const page = findPage(pages, target.url, target.host)
 		if (!page) return void (this.show(instance, 'missing'), alert())
@@ -127,7 +143,8 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 			try {
 				pages = await this.clicker.listPages()
 			} catch {
-				for (const instance of this.instances.values()) this.show(instance, 'offline')
+				const status = await this.offlineStatus()
+				for (const instance of this.instances.values()) this.show(instance, status)
 				return
 			}
 			for (const instance of [...this.instances.values()]) {
@@ -161,12 +178,18 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 		instance.action.setState(state).catch(fail)
 	}
 
+	/** No port: OBS started without the debug flag, or not running at all. */
+	private async offlineStatus(): Promise<Status> {
+		return (await this.clicker.obsRunning().catch(() => false)) ? 'debugOff' : 'offline'
+	}
+
 	private show(instance: Instance<S>, status: Status): void {
 		if (status === instance.status) return
 		instance.status = status
-		if (status !== 'ok') log(`state ${instance.action.id} ${status === 'offline' ? OFFLINE : MISSING}`)
+		const text = { offline: OFFLINE, missing: MISSING, debugOff: DEBUG_OFF, ok: '' }[status]
+		if (status !== 'ok') log(`state ${instance.action.id} ${status === 'debugOff' ? '디버그꺼짐' : text}`)
 		if (instance.userTitle) return
-		const title = status === 'offline' ? OFFLINE : status === 'missing' ? MISSING : this.labelOf(instance.settings)
+		const title = status === 'ok' ? this.labelOf(instance.settings) : text
 		if (title === instance.sentTitle) return
 		instance.sentTitle = title
 		instance.action.setTitle(title).catch(fail)
