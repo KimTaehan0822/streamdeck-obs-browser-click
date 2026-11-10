@@ -67,7 +67,7 @@
   - `getShot without page`: 페이지 없음/오프라인 → `{ ok: false }`; 있으면 `{ ok: true, data, width, height }`.
 - [ ] **Step 2:** `npm test` → FAIL.
 - [ ] **Step 3:** 구현(`actions.ts`, `plugin.ts`).
-- [ ] **Step 4:** 설정 창: 범용 클릭에 `방식` select(`button` 버튼으로 찾기 / `point` 위치 찍기). `point`일 때 [화면 불러오기] 버튼, 캡처 그림(너비 100%, 클릭 시 `x = round(offsetX * width / clientWidth)`, `y`도 같은 식), 빨간 점 표시, `pointX`·`pointY` textfield. 찍으면 두 textfield 값을 바꾸고 설정 저장(`client.setSettings`로 현재 설정에 합쳐 저장 후 `client.getSettings()`). 방식에 따라 버튼/선택자 칸과 위치 칸을 숨김/표시(`valuechange`).
+- [ ] **Step 4:** 설정 창: 범용 클릭에 `방식` select(`button` 버튼으로 찾기 / `point` 위치 찍기). `point`일 때 [화면 불러오기] 버튼, 그 바로 아래 늘 보이는 안내문(스펙의 문구 그대로, `.hint`보다 눈에 띄게 노란색 `#f0c040`), 캡처 그림(너비 100%, 클릭 시 `x = round(offsetX * width / clientWidth)`, `y`도 같은 식), 빨간 점 표시, `pointX`·`pointY` textfield. 찍으면 두 textfield 값을 바꾸고 설정 저장(`client.setSettings`로 현재 설정에 합쳐 저장 후 `client.getSettings()`). 방식에 따라 버튼/선택자 칸과 위치 칸을 숨김/표시(`valuechange`).
 - [ ] **Step 5:** `npm test` → PASS, `npm run bundle`, `npx streamdeck validate` 성공.
 - [ ] **Step 6:** 플러그인 재시작 확인(Global Constraints의 마무리 순서).
 - [ ] **Step 7:** 커밋 `feat: custom click at a point picked on a page capture`.
