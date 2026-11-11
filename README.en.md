@@ -75,7 +75,7 @@ Right-click an OBS shortcut → **Properties** → add a space and `--remote-deb
 
 Actions marked ● follow the on/off state (a sky-blue ring when on). You can set a different icon and title per state in the Stream Deck app.
 
-**Custom click:** choose a **페이지** (page), then a **방식** (method).
+**Custom click:** choose a **페이지** (page), then a **방식** (method). Browser sources are listed by their OBS name, like `[소스] My Alerts` (소스 means source); custom docks by their page title.
 - **버튼으로 찾기** (find by button): the page's buttons are listed by text. For an icon button without text, enter a **CSS 선택자** (CSS selector).
 - **위치 찍기** (pick a point): click where to press on the capture from **[화면 불러오기]** (load screen). The click goes to that page only and your real mouse doesn't move. If you resize the dock or browser source, pick the point again.
 
