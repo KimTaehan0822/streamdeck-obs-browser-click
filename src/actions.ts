@@ -8,7 +8,7 @@ import {
 } from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
 import { execFile } from 'node:child_process'
-import { clickAt, evaluate, findPage, listPages, screenshot, type CdpPage } from './cdp.js'
+import { clickAt, evaluate, findPage, listPages, screenshot, scrollerAt, scrollOf, scrollTo, type CdpPage } from './cdp.js'
 import { readBrowserSources, sourceNameFor, type BrowserSource } from './obs-sources.js'
 import { pageExpression, type ListItem, type Target } from './page-script.js'
 import { PRESETS, presetById, type Service } from './presets.js'
@@ -20,6 +20,9 @@ export interface Clicker {
 	evaluate(wsUrl: string, expr: string): Promise<unknown>
 	clickAt(wsUrl: string, x: number, y: number): Promise<'ok' | 'outside'>
 	screenshot(wsUrl: string): Promise<{ data: string; width: number; height: number }>
+	scrollOf(wsUrl: string, box: string): Promise<{ x: number; y: number } | null>
+	scrollTo(wsUrl: string, box: string, x: number, y: number): Promise<{ x: number; y: number } | null>
+	scrollerAt(wsUrl: string, x: number, y: number): Promise<{ box: string; x: number; y: number }>
 	/** Whether obs64.exe runs, asked only when the port does not answer. */
 	obsRunning(): Promise<boolean>
 	browserSources(): Promise<BrowserSource[]>
@@ -38,15 +41,16 @@ export function createClicker(port: () => number): Clicker {
 		)
 		return running
 	}
-	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot, obsRunning, browserSources: () => readBrowserSources() }
+	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot, scrollOf, scrollTo, scrollerAt, obsRunning, browserSources: () => readBrowserSources() }
 }
 
 export const POLL_MS = 1000
 const OFFLINE = 'OFFLINE'
 const MISSING = '없음'
 const DEBUG_OFF = '디버그\n꺼짐'
+const SCROLLED = '스크롤\n바뀜'
 
-type Status = 'ok' | 'offline' | 'missing' | 'debugOff'
+type Status = 'ok' | 'offline' | 'missing' | 'debugOff' | 'scrolled'
 type KeyAction = KeyDownEvent<JsonObject>['action']
 
 interface Instance<S> {
@@ -79,6 +83,11 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 		return (await this.clicker.evaluate(page.webSocketDebuggerUrl, pageExpression(target, 'click'))) === 'ok'
 	}
 
+	/** What a found, non-toggle key shows on each poll. */
+	protected async check(_settings: S, _page: CdpPage): Promise<Status> {
+		return 'ok'
+	}
+
 	get polling(): boolean {
 		return this.timer !== undefined
 	}
@@ -98,9 +107,14 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 	}
 
 	override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<S>): Promise<void> {
-		const instance = this.instances.get(ev.action.id)
+		await this.settingsChanged(ev.action.id, ev.payload.settings)
+	}
+
+	/** Also for settings the plugin wrote itself: Stream Deck sends no didReceiveSettings for those. */
+	async settingsChanged(id: string, settings: S): Promise<void> {
+		const instance = this.instances.get(id)
 		if (!instance) return
-		instance.settings = ev.payload.settings
+		instance.settings = settings
 		instance.status = undefined // the label may have changed
 		await this.poll()
 	}
@@ -156,7 +170,7 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 					this.show(instance, 'missing')
 					continue
 				}
-				if (!target.toggle) this.show(instance, 'ok')
+				if (!target.toggle) this.show(instance, await this.check(instance.settings, page))
 				else await this.readState(instance, page, target)
 			}
 		} finally {
@@ -188,8 +202,8 @@ export abstract class ClickAction<S extends JsonObject> extends SingletonAction<
 	private show(instance: Instance<S>, status: Status): void {
 		if (status === instance.status) return
 		instance.status = status
-		const text = { offline: OFFLINE, missing: MISSING, debugOff: DEBUG_OFF, ok: '' }[status]
-		if (status !== 'ok') log(`state ${instance.action.id} ${status === 'debugOff' ? '디버그꺼짐' : text}`)
+		const text = { offline: OFFLINE, missing: MISSING, debugOff: DEBUG_OFF, scrolled: SCROLLED, ok: '' }[status]
+		if (status !== 'ok') log(`state ${instance.action.id} ${text.replace('\n', '')}`)
 		if (instance.userTitle) return
 		const title = status === 'ok' ? this.labelOf(instance.settings) : text
 		if (title === instance.sentTitle) return
@@ -227,7 +241,72 @@ export class ServiceRemoteAction extends ClickAction<RemoteSettings> {
 	}
 }
 
-type CustomSettings = { pageUrl?: string; button?: string; selector?: string; mode?: string; pointX?: string; pointY?: string }
+type CustomSettings = {
+	pageUrl?: string
+	button?: string
+	selector?: string
+	mode?: string
+	pointX?: string
+	pointY?: string
+	/** The scroll box under the point when it was picked (CSS selector, '' = whole page) and its scroll then. */
+	scrollBox?: string
+	scrollX?: string
+	scrollY?: string
+	/** Off: a press on a scrolled page only alerts. Missing means on. */
+	scrollRestore?: boolean
+}
+type Scroll = { x: number; y: number }
+
+/** The saved scroll of a point key; undefined for keys picked before scroll was saved. */
+export function savedScrollOf(s: CustomSettings): (Scroll & { box: string }) | undefined {
+	if (!pointOf(s)) return undefined
+	const num = (v?: string) => (v?.trim() ? Number(v) : NaN)
+	const x = num(s.scrollX)
+	const y = num(s.scrollY)
+	// Negative is real: bottom-up chat lists (flex column-reverse, e.g. Chzzk) scroll from 0 downward.
+	return Number.isFinite(x) && Number.isFinite(y) ? { box: s.scrollBox ?? '', x, y } : undefined
+}
+
+// Zoomed pages can land a fraction off. A gone box (null) never matches.
+export const sameScroll = (a: Scroll | null, b: Scroll) => !!a && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1
+
+/** Scrolls the key's box back to the saved scroll; used by the key and by the settings page button. */
+export async function restoreScroll(clicker: Clicker, s: CustomSettings): Promise<'done' | 'short' | 'noSaved' | 'noPage' | 'noBox'> {
+	const saved = savedScrollOf(s)
+	if (!saved) return 'noSaved'
+	try {
+		const page = findPage(await clicker.listPages(), s.pageUrl ?? '')
+		if (!page) return 'noPage'
+		const got = await clicker.scrollTo(page.webSocketDebuggerUrl, saved.box, saved.x, saved.y)
+		if (!got) return 'noBox'
+		return sameScroll(got, saved) ? 'done' : 'short'
+	} catch {
+		return 'noPage'
+	}
+}
+
+type SettingsStore = { getSettings(): Promise<JsonObject>; setSettings(s: JsonObject): Promise<void> }
+
+/**
+ * Saves the scroll box under a just-picked point into the key's settings; returns them when saved.
+ * Done here, not in the settings page, so a closed page still saves it, and a late answer
+ * for an older point (the user clicked again) is dropped.
+ */
+export async function saveScroller(clicker: Clicker, key: SettingsStore, x: number, y: number): Promise<JsonObject | undefined> {
+	try {
+		const s = (await key.getSettings()) as CustomSettings
+		const page = findPage(await clicker.listPages(), s.pageUrl ?? '')
+		if (!page) return undefined
+		const found = await clicker.scrollerAt(page.webSocketDebuggerUrl, x, y)
+		const now = (await key.getSettings()) as CustomSettings
+		if (now.pageUrl !== s.pageUrl || now.pointX !== String(x) || now.pointY !== String(y)) return undefined
+		const saved = { ...now, scrollBox: found.box, scrollX: String(found.x), scrollY: String(found.y) }
+		await key.setSettings(saved)
+		return saved
+	} catch {
+		return undefined
+	}
+}
 
 /** The page point to click in "위치 찍기" mode; undefined unless both coordinates are numbers ≥ 0. */
 export function pointOf(s: CustomSettings): { x: number; y: number } | undefined {
@@ -263,7 +342,22 @@ export class CustomClickAction extends ClickAction<CustomSettings> {
 	protected override async press(s: CustomSettings, page: CdpPage, target: Target): Promise<boolean> {
 		const p = pointOf(s)
 		if (!p) return super.press(s, page, target)
+		const saved = savedScrollOf(s)
+		if (saved && !sameScroll(await this.clicker.scrollOf(page.webSocketDebuggerUrl, saved.box), saved)) {
+			// The point now covers other content: never click; scroll back if allowed and let the next press click.
+			if (s.scrollRestore === false) return false
+			return sameScroll(await this.clicker.scrollTo(page.webSocketDebuggerUrl, saved.box, saved.x, saved.y), saved)
+		}
 		return (await this.clicker.clickAt(page.webSocketDebuggerUrl, p.x, p.y)) === 'ok'
+	}
+	protected override async check(s: CustomSettings, page: CdpPage): Promise<'ok' | 'scrolled'> {
+		const saved = savedScrollOf(s)
+		if (!saved) return 'ok'
+		try {
+			return sameScroll(await this.clicker.scrollOf(page.webSocketDebuggerUrl, saved.box), saved) ? 'ok' : 'scrolled'
+		} catch {
+			return 'ok' // a slow page must not stall the poll; a press still refuses
+		}
 	}
 }
 

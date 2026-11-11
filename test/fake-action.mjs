@@ -15,11 +15,25 @@ export function fakeAction(id, settings = {}) {
 }
 
 /** A Clicker whose pages and page answers the test sets; records every evaluate. */
-export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok', obs = false, sources = [] } = {}) {
+export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok', obs = false, sources = [], scroll = () => ({ x: 0, y: 0 }), scrollTo = (x, y) => ({ x, y }) } = {}) {
 	const evaluated = []
 	const clicked = []
 	const shots = []
+	const scrollReads = []
+	const scrolledTo = []
 	return {
+		scrollReads,
+		scrolledTo,
+		set scroll(fn) { scroll = fn },
+		scrollOf: async (wsUrl, box) => {
+			scrollReads.push({ wsUrl, box })
+			return scroll(box)
+		},
+		scrollTo: async (wsUrl, box, x, y) => {
+			scrolledTo.push({ box, x, y })
+			return scrollTo(x, y, box)
+		},
+		scrollerAt: async (wsUrl, x, y) => ({ box: '#list', x: 0, y: 40 }),
 		browserSources: async () => sources,
 		evaluated,
 		clicked,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { listPages, findPage, evaluate, send, screenshot, clickAt } from '../dist/cdp.js'
+import { listPages, findPage, evaluate, send, screenshot, clickAt, scrollOf, scrollTo, scrollerAt } from '../dist/cdp.js'
 import { fakeCdp } from './fake-cdp.mjs'
 
 const TARGETS = [
@@ -114,6 +114,58 @@ test('screenshot returns jpeg and size', async () => {
 		assert.deepEqual(await screenshot(cdp.wsUrl('a')), { data: 'SlBFRw==', width: 300, height: 200 })
 		const shot = cdp.received.find((m) => m.method === 'Page.captureScreenshot')
 		assert.deepEqual(shot.params, { format: 'jpeg', quality: 70 })
+	} finally {
+		await cdp.close()
+	}
+})
+
+const evalReply = (value) => (msg) => ({ result: { result: { value } } })
+const sentExpr = (cdp) => cdp.received.find((m) => m.method === 'Runtime.evaluate').params.expression
+
+test('scrollOf reads the box scroll', async () => {
+	const cdp = await fakeCdp({ reply: evalReply({ x: 0, y: 40 }) })
+	try {
+		assert.deepEqual(await scrollOf(cdp.wsUrl('a'), '#list'), { x: 0, y: 40 })
+		assert.match(sentExpr(cdp), /"#list"/)
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('scrollOf of a missing box is null', async () => {
+	const cdp = await fakeCdp({ reply: evalReply(null) })
+	try {
+		assert.equal(await scrollOf(cdp.wsUrl('a'), '#gone'), null)
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('scrollTo moves and reports where it got', async () => {
+	const cdp = await fakeCdp({ reply: evalReply({ x: 0, y: 120 }) })
+	try {
+		assert.deepEqual(await scrollTo(cdp.wsUrl('a'), '', 0, 300), { x: 0, y: 120 })
+		assert.match(sentExpr(cdp), /scrollTo\(\{ left: 0, top: 300, behavior: 'instant' \}\)/, 'smooth-scroll pages must not animate, or the read-back looks short')
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('box selector is passed as data, not code', async () => {
+	const cdp = await fakeCdp({ reply: evalReply(null) })
+	try {
+		await scrollOf(cdp.wsUrl('a'), '"); alert(1); ("')
+		assert.match(sentExpr(cdp), /"\\"\); alert\(1\); \(\\""/)
+	} finally {
+		await cdp.close()
+	}
+})
+
+test('scrollerAt returns the box under the point', async () => {
+	const cdp = await fakeCdp({ reply: evalReply({ box: '#list', x: 0, y: 40 }) })
+	try {
+		assert.deepEqual(await scrollerAt(cdp.wsUrl('a'), 60, 108), { box: '#list', x: 0, y: 40 })
+		assert.match(sentExpr(cdp), /elementFromPoint\(60, 108\)/)
 	} finally {
 		await cdp.close()
 	}

@@ -1,7 +1,7 @@
 import streamDeck from '@elgato/streamdeck'
 import type { JsonObject } from '@elgato/utils'
 import { setupShortcuts } from './shortcut.js'
-import { buttonItems, createClicker, CustomClickAction, pageItems, presetItemsFor, SERVICE_ACTIONS, ServiceRemoteAction, shotItem } from './actions.js'
+import { buttonItems, createClicker, CustomClickAction, pageItems, presetItemsFor, restoreScroll, saveScroller, SERVICE_ACTIONS, ServiceRemoteAction, shotItem } from './actions.js'
 
 // The Stream Deck app keeps no console output; send errors to the plugin's logs folder instead.
 console.error = (...args: unknown[]) => streamDeck.logger.error(args.map(String).join(' '))
@@ -10,6 +10,7 @@ console.info = (...args: unknown[]) => streamDeck.logger.info(args.map(String).j
 export const DEFAULT_PORT = 9222
 let port = DEFAULT_PORT
 const clicker = createClicker(() => port)
+const custom = new CustomClickAction(clicker)
 
 function applyGlobal(settings: JsonObject): void {
 	const n = Number(String(settings.port ?? '').trim())
@@ -29,6 +30,14 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 	} else if (payload.event === 'getShot') {
 		const shot = await shotItem(clicker, typeof payload.pageUrl === 'string' ? payload.pageUrl : '')
 		return void streamDeck.ui.sendToPropertyInspector({ event: 'getShot', ...shot } as JsonObject).catch(() => {})
+	} else if (payload.event === 'saveScroller') {
+		const { x, y } = payload as { x?: unknown; y?: unknown }
+		const saved = await saveScroller(clicker, ev.action, Number(x), Number(y))
+		if (saved) await custom.settingsChanged(ev.action.id, saved)
+		return
+	} else if (payload.event === 'restoreScroll') {
+		const result = await restoreScroll(clicker, await ev.action.getSettings().catch(() => ({})))
+		return void streamDeck.ui.sendToPropertyInspector({ event: 'restoreScroll', result }).catch(() => {})
 	} else if (payload.event === 'setupShortcut') {
 		const result = await setupShortcuts(port)
 		return void streamDeck.ui.sendToPropertyInspector({ event: 'setupShortcut', ...result } as JsonObject).catch(() => {})
@@ -38,6 +47,6 @@ streamDeck.ui.onSendToPlugin(async (ev) => {
 
 streamDeck.settings.onDidReceiveGlobalSettings((ev) => applyGlobal(ev.settings))
 for (const { service } of SERVICE_ACTIONS) streamDeck.actions.registerAction(new ServiceRemoteAction(clicker, service))
-streamDeck.actions.registerAction(new CustomClickAction(clicker))
+streamDeck.actions.registerAction(custom)
 await streamDeck.connect()
 applyGlobal(await streamDeck.settings.getGlobalSettings())

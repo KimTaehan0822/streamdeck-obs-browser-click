@@ -36,8 +36,9 @@
 				<div class="hint">글자가 없는 아이콘 버튼은 CSS 선택자로 지정하세요.</div>
 			</div>
 			<div id="by-point" hidden>
-				<sdpi-item label=""><button type="button" class="tb-btn" id="shoot">화면 불러오기</button></sdpi-item>
-				<div class="notice">독이나 브라우저 소스의 크기를 바꾸면 같은 좌표가 다른 곳을 누를 수 있어요. 크기를 바꾼 뒤에는 꼭 [화면 불러오기]로 위치를 다시 찍어 주세요.</div>
+				<sdpi-item label=""><button type="button" class="tb-btn" id="shoot">화면 불러오기</button> <button type="button" class="tb-btn" id="restore">스크롤 되돌리기</button></sdpi-item>
+				<sdpi-item label="스크롤"><sdpi-checkbox setting="scrollRestore" default="true" label="스크롤이 바뀌면 키로 되돌리기"></sdpi-checkbox></sdpi-item>
+				<div class="notice">독이나 브라우저 소스의 크기를 바꾸면 같은 좌표가 다른 곳을 누를 수 있어요. 크기를 바꾼 뒤에는 꼭 [화면 불러오기]로 위치를 다시 찍어 주세요. 페이지를 스크롤하면 키에 '스크롤 바뀜'이 떠요. 키를 한 번 누르거나 [스크롤 되돌리기]를 누르면 찍을 때의 스크롤로 돌아가요. 찍은 곳이 들어 있는 스크롤 칸(목록 등)을 기준으로 봐요.</div>
 				<div class="hint" id="shot-status" role="status">페이지를 고르고 [화면 불러오기]를 누른 뒤, 누를 곳을 찍으세요.</div>
 				<div class="shot" id="shot" hidden><img id="shot-img" alt="페이지 캡처: 누를 곳을 찍으세요" /><div class="dot" id="dot" hidden></div></div>
 				<sdpi-item label="X"><sdpi-textfield id="px" setting="pointX" pattern="^[0-9]*$" placeholder="찍으면 채워져요"></sdpi-textfield></sdpi-item>
@@ -120,15 +121,32 @@
 				const current = (await client.getSettings()).settings
 				placeDot(current.pointX, current.pointY)
 			})
+			// The plugin answers { event: 'restoreScroll', result: 'done' | 'short' | 'noSaved' | 'noPage' | 'noBox' } (restoreScroll in src/actions.ts).
+			const RESTORED = {
+				done: '찍을 때의 스크롤로 되돌렸어요.',
+				short: '페이지가 짧아져서 그 위치까지 못 갔어요. 위치를 다시 찍어 주세요.',
+				noSaved: '저장된 스크롤이 없어요. [화면 불러오기]로 위치를 다시 찍어 주세요.',
+				noPage: '페이지를 찾지 못했어요. OBS가 디버깅 옵션으로 켜져 있는지 확인하세요.',
+				noBox: '찍을 때의 스크롤 칸을 찾지 못했어요. 페이지 화면이 바뀐 것 같아요. 위치를 다시 찍어 주세요.',
+			}
+			$('restore').addEventListener('click', () => {
+				$('shot-status').textContent = '되돌리는 중…'
+				client.send('sendToPlugin', { event: 'restoreScroll' })
+			})
+			client.sendToPropertyInspector.subscribe((ev) => {
+				if (ev.payload?.event === 'restoreScroll') $('shot-status').textContent = RESTORED[ev.payload.result] ?? RESTORED.noPage
+			})
 			$('shot-img').addEventListener('click', async (e) => {
 				const img = e.currentTarget
 				const x = Math.round((e.offsetX * shot.width) / img.clientWidth)
 				const y = Math.round((e.offsetY * shot.height) / img.clientHeight)
 				const current = (await client.getSettings()).settings
-				await client.setSettings({ ...current, pointX: String(x), pointY: String(y) })
+				// Old scroll values belong to the old point; the plugin saves the new ones (saveScroller in src/actions.ts).
+				await client.setSettings({ ...current, pointX: String(x), pointY: String(y), scrollBox: '', scrollX: '', scrollY: '' })
 				await client.getSettings() // fills the X and Y fields
 				placeDot(x, y)
 				$('shot-status').textContent = `위치 ${x},${y}를 저장했어요.`
+				client.send('sendToPlugin', { event: 'saveScroller', x, y })
 			})
 		}
 		main()

@@ -78,6 +78,42 @@ export async function evaluate(wsUrl: string, expression: string, timeoutMs = 20
 
 const SIZE = '({ width: innerWidth, height: innerHeight })'
 type Size = { width: number; height: number }
+type Scroll = { x: number; y: number }
+
+// A box is a CSS selector from scrollerAt; '' is the whole page. The selector goes in as a JSON string, never as code.
+const boxExpr = (box: string, then: string) =>
+	`(() => { const e = ${JSON.stringify(box)} ? document.querySelector(${JSON.stringify(box)}) : document.scrollingElement; if (!e) return null; ${then}; return { x: Math.round(e.scrollLeft), y: Math.round(e.scrollTop) } })()`
+
+/** The scroll of a box on the page; null when the box is gone (the page changed). */
+export async function scrollOf(wsUrl: string, box: string): Promise<Scroll | null> {
+	return (await evaluate(wsUrl, boxExpr(box, ''))) as Scroll | null
+}
+
+/** Scrolls the box and returns where it got (a shorter list stops early); null when the box is gone. */
+export async function scrollTo(wsUrl: string, box: string, x: number, y: number): Promise<Scroll | null> {
+	return (await evaluate(wsUrl, boxExpr(box, `e.scrollTo({ left: ${Number(x)}, top: ${Number(y)}, behavior: 'instant' })`))) as Scroll | null
+}
+
+// Nearest scrolling ancestor of the point, named by a selector path from the nearest id (or the body).
+const SCROLLER_AT = `(() => {
+	const scrolls = (e) => { const s = getComputedStyle(e); return (/(auto|scroll)/.test(s.overflowY) && e.scrollHeight > e.clientHeight) || (/(auto|scroll)/.test(s.overflowX) && e.scrollWidth > e.clientWidth) }
+	let e = document.elementFromPoint(X, Y)
+	while (e && e !== document.body && e !== document.documentElement && !scrolls(e)) e = e.parentElement
+	const root = document.scrollingElement
+	if (!e || e === document.body || e === document.documentElement) return { box: '', x: Math.round(root.scrollLeft), y: Math.round(root.scrollTop) }
+	const parts = []
+	for (let n = e; n && n !== document.body; n = n.parentElement) {
+		if (n.id && document.querySelectorAll('#' + CSS.escape(n.id)).length === 1) { parts.unshift('#' + CSS.escape(n.id)); break }
+		parts.unshift(n.localName + ':nth-child(' + ([...n.parentElement.children].indexOf(n) + 1) + ')')
+		if (n.parentElement === document.body) parts.unshift('body')
+	}
+	return { box: parts.join(' > '), x: Math.round(e.scrollLeft), y: Math.round(e.scrollTop) }
+})()`
+
+/** The scroll box holding a page point and its scroll now, saved with a picked point. */
+export async function scrollerAt(wsUrl: string, x: number, y: number): Promise<Scroll & { box: string }> {
+	return (await evaluate(wsUrl, SCROLLER_AT.replace('X, Y', `${Number(x)}, ${Number(y)}`))) as Scroll & { box: string }
+}
 
 export async function screenshot(wsUrl: string): Promise<Size & { data: string }> {
 	const [size, shot] = await send(wsUrl, [

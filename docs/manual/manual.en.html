@@ -84,7 +84,7 @@
 <li><p><strong>Find by button:</strong> the <strong>버튼</strong> (button) list shows the page's buttons by their text. Buttons with the same text get a number, like <code>시작 (2)</code>. For an icon button without text, enter a <strong>CSS 선택자</strong> (CSS selector); it wins over the button list.</p></li>
 <li><p><strong>Pick a point:</strong> click <strong>[화면 불러오기]</strong> (load screen) to see a capture of the page, then click where to press. A red dot marks it and X, Y fill in.</p></li>
 </ol>
-<p><strong>About picked points:</strong> if you resize the dock or browser source, the same coordinates may land somewhere else. After resizing, pick the point again with [화면 불러오기]. The click goes to that page only, and your real mouse cursor doesn't move.</p>
+<p><strong>About picked points:</strong> if you resize the dock or browser source, the same coordinates may land somewhere else. After resizing, pick the point again with [화면 불러오기]. The click goes to that page only, and your real mouse cursor doesn't move. If you scroll the page, the key shows <strong>스크롤 바뀜</strong> (scrolled). One press scrolls back to where you picked the point (no click); the next press clicks. The <strong>[스크롤 되돌리기]</strong> (scroll back) button in the settings does the same, and if you turn off <strong>스크롤이 바뀌면 키로 되돌리기</strong> (scroll back with the key), the key only shows ⚠. Scrolling is checked on the box that holds the point (a donation list, a chat, and so on). If the remote's layout changes and that box can't be found, nothing is pressed and the key shows ⚠; pick the point again. When a button can be found by text, <strong>버튼으로 찾기</strong> (find by button) is sturdier.</p>
 </section>
 
 <section><h2>Key titles</h2>
@@ -104,6 +104,7 @@
 <tr><td>디버그 꺼짐 (debug off)</td><td>OBS runs without the debug option</td><td>Close OBS and start it from <strong>OBS Studio (Browser Click)</strong></td></tr>
 <tr><td>없음 (none)</td><td>That remote isn't open in OBS, or no action is chosen yet</td><td>Add the remote dock in OBS → choose an action in the settings screen</td></tr>
 <tr><td>⚠ (briefly)</td><td>The button wasn't found when pressed</td><td>Nothing was pressed. Check whether the remote's layout changed; for custom click, pick it again</td></tr>
+<tr><td>스크롤 바뀜 (scrolled)</td><td>The page of a picked-point key is scrolled differently from when you picked it</td><td>One press only scrolls back (turned off in the settings: ⚠ only). The next press clicks</td></tr>
 <tr><td>A picked point presses the wrong place</td><td>The dock or source was resized</td><td>Pick it again with [화면 불러오기]</td></tr>
 <tr><td>The page list is empty</td><td>OBS started without the option, or just started</td><td>[목록 새로고침]; if that doesn't help, see "debug off"</td></tr>
 </tbody></table>

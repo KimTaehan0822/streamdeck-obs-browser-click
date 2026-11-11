@@ -77,7 +77,7 @@ Actions marked ● follow the on/off state (a sky-blue ring when on). You can se
 
 **Custom click:** choose a **페이지** (page), then a **방식** (method). Browser sources are listed by their OBS name, like `[소스] My Alerts` (소스 means source); custom docks by their page title.
 - **버튼으로 찾기** (find by button): the page's buttons are listed by text. For an icon button without text, enter a **CSS 선택자** (CSS selector).
-- **위치 찍기** (pick a point): click where to press on the capture from **[화면 불러오기]** (load screen). The click goes to that page only and your real mouse doesn't move. If you resize the dock or browser source, pick the point again.
+- **위치 찍기** (pick a point): click where to press on the capture from **[화면 불러오기]** (load screen). The click goes to that page only and your real mouse doesn't move. If you resize the dock or browser source, pick the point again. If you scroll the page, the key shows `스크롤 바뀜` (scrolled); one press scrolls back to where you picked (the next press clicks). The **[스크롤 되돌리기]** (scroll back) button does the same; turn off **스크롤이 바뀌면 키로 되돌리기** (scroll back with the key) and the key only shows ⚠. Scrolling is checked on the box that holds the point (a donation list, a chat); if the layout changes and that box is gone, nothing is pressed and the key shows ⚠. Find by button is sturdier when it works.
 
 ## Settings
 
@@ -94,6 +94,7 @@ Actions marked ● follow the on/off state (a sky-blue ring when on). You can se
 | **OFFLINE** | OBS isn't running, or another program uses the port | Start OBS from the new shortcut, check the port |
 | **디버그 꺼짐** (debug off) | OBS runs without the debug option | Close OBS and start it from OBS Studio (Browser Click) |
 | **없음** (none) | That remote isn't in OBS, or no action is chosen | Add the remote dock, choose an action |
+| **스크롤 바뀜** (scrolled) | The page of a picked-point key is scrolled differently from when you picked it | One press only scrolls back (turned off in the settings: ⚠ only). The next press clicks |
 | ⚠ (briefly) | The button wasn't found when pressed | Nothing was pressed. Check whether the remote's layout changed |
 
 ## Building

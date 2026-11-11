@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { CustomClickAction, ServiceRemoteAction, SERVICE_ACTIONS, customTarget, presetItemsFor, pageItems, buttonItems, pointOf, shotItem } from '../dist/actions.js'
+import { CustomClickAction, ServiceRemoteAction, SERVICE_ACTIONS, customTarget, presetItemsFor, pageItems, buttonItems, pointOf, shotItem, restoreScroll, saveScroller } from '../dist/actions.js'
 import { pageExpression } from '../dist/page-script.js'
 import { presetById } from '../dist/presets.js'
 import { fakeAction, fakeClicker, PAGES } from './fake-action.mjs'
@@ -230,6 +230,144 @@ test('point click error alerts', async () => {
 	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '1', pointY: '1' })
 	await a.onKeyDown(f.ev())
 	assert.equal(f.calls.alerts, 1)
+})
+
+const P = { mode: 'point', pageUrl: WEFLAB, pointX: '60', pointY: '108', scrollBox: '#list', scrollX: '0', scrollY: '40' }
+const at = (x, y) => () => ({ x, y })
+
+test('scrolled page warns on the key', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { f } = await appear(CustomClickAction, c, P)
+	assert.equal(f.calls.titles.at(-1), '스크롤\n바뀜')
+})
+
+test('warning clears when scroll matches again', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	c.scroll = at(0, 41)
+	await a.poll()
+	assert.equal(f.calls.titles.at(-1), '위치 60,108')
+})
+
+test('press restores scroll and does not click', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	await a.onKeyDown(f.ev())
+	assert.equal(c.clicked.length, 0)
+	assert.deepEqual(c.scrolledTo, [{ box: '#list', x: 0, y: 40 }])
+	assert.equal(c.scrollReads.at(-1).box, '#list')
+	assert.equal(f.calls.alerts, 0)
+	assert.equal(f.calls.titles.at(-1), '위치 60,108')
+})
+
+test('second press clicks after restore', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	await a.onKeyDown(f.ev())
+	c.scroll = at(0, 40)
+	await a.onKeyDown(f.ev())
+	assert.deepEqual(c.clicked, [{ wsUrl: 'ws://w', x: 60, y: 108 }])
+})
+
+test('restore off only alerts', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, { ...P, scrollRestore: false })
+	await a.onKeyDown(f.ev())
+	assert.equal(c.clicked.length + c.scrolledTo.length, 0)
+	assert.equal(f.calls.alerts, 1)
+	assert.equal(f.calls.titles.at(-1), '스크롤\n바뀜')
+})
+
+test('restore that falls short alerts', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200), scrollTo: () => ({ x: 0, y: 150 }) })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	await a.onKeyDown(f.ev())
+	assert.equal(c.clicked.length, 0)
+	assert.equal(f.calls.alerts, 1)
+})
+
+test('scroll read error keeps label', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: () => Promise.reject(new Error('CDP timeout')) })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	assert.equal(f.calls.titles.at(-1), '위치 60,108')
+	await a.onKeyDown(f.ev())
+	assert.equal(f.calls.alerts, 1)
+	assert.equal(c.clicked.length, 0)
+})
+
+test('keys without saved scroll click as before', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, { mode: 'point', pageUrl: WEFLAB, pointX: '60', pointY: '108' })
+	await a.onKeyDown(f.ev())
+	assert.equal(c.scrollReads.length, 0)
+	assert.equal(c.clicked.length, 1)
+})
+
+test('missing scroll box warns and never clicks', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: () => null, scrollTo: () => null })
+	const { a, f } = await appear(CustomClickAction, c, P)
+	assert.equal(f.calls.titles.at(-1), '스크롤\n바뀜')
+	await a.onKeyDown(f.ev())
+	assert.equal(c.clicked.length, 0)
+	assert.equal(f.calls.alerts, 1)
+	assert.equal(await restoreScroll(c, P), 'noBox')
+})
+
+test('a saved scroll without a box means the whole page', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 40) })
+	const { a, f } = await appear(CustomClickAction, c, { ...P, scrollBox: undefined })
+	await a.onKeyDown(f.ev())
+	assert.equal(c.scrollReads.at(-1).box, '')
+	assert.equal(c.clicked.length, 1)
+})
+
+test('bottom-up chat boxes scroll to negative values and are still guarded', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 0) })
+	const { a, f } = await appear(CustomClickAction, c, { ...P, scrollY: '-50' })
+	assert.equal(f.calls.titles.at(-1), '스크롤\n바뀜')
+	await a.onKeyDown(f.ev())
+	assert.deepEqual(c.scrolledTo, [{ box: '#list', x: 0, y: -50 }])
+	assert.equal(c.clicked.length, 0)
+})
+
+// A key whose settings the plugin can read and write, like ev.action in onSendToPlugin.
+const store = (settings) => ({ settings, getSettings: async function () { return this.settings }, setSettings: async function (s) { this.settings = s } })
+const picked = { mode: 'point', pageUrl: WEFLAB, pointX: '60', pointY: '108' }
+
+test('saveScroller stores the box with the point it was asked for', async () => {
+	const key = store({ ...picked })
+	const want = { ...picked, scrollBox: '#list', scrollX: '0', scrollY: '40' }
+	assert.deepEqual(await saveScroller(fakeClicker({ pages: PAGES }), key, 60, 108), want)
+	assert.deepEqual(key.settings, want)
+})
+
+test('saveScroller drops a late answer for an older point', async () => {
+	const key = store({ ...picked, pointX: '200', pointY: '300' })
+	assert.equal(await saveScroller(fakeClicker({ pages: PAGES }), key, 60, 108), undefined)
+	assert.equal(key.settings.scrollBox, undefined)
+})
+
+test('saveScroller saves nothing without the page', async () => {
+	const key = store({ ...picked })
+	assert.equal(await saveScroller(fakeClicker({ pages: [] }), key, 60, 108), undefined)
+	assert.equal(await saveScroller(fakeClicker({ offline: true }), key, 60, 108), undefined)
+	assert.equal(key.settings.scrollBox, undefined)
+})
+
+test('settings the plugin saved itself reach the key', async () => {
+	const c = fakeClicker({ pages: PAGES, scroll: at(0, 200) })
+	const { a, f } = await appear(CustomClickAction, c, picked)
+	assert.equal(f.calls.titles.at(-1), '위치 60,108')
+	await a.settingsChanged(f.action.id, P)
+	assert.equal(f.calls.titles.at(-1), '스크롤\n바뀜')
+})
+
+test('restoreScroll reports', async () => {
+	assert.equal(await restoreScroll(fakeClicker({ pages: PAGES }), { ...P, scrollY: '' }), 'noSaved')
+	assert.equal(await restoreScroll(fakeClicker({ pages: [] }), P), 'noPage')
+	assert.equal(await restoreScroll(fakeClicker({ offline: true }), P), 'noPage')
+	assert.equal(await restoreScroll(fakeClicker({ pages: PAGES }), P), 'done')
+	assert.equal(await restoreScroll(fakeClicker({ pages: PAGES, scrollTo: () => ({ x: 0, y: 10 }) }), P), 'short')
 })
 
 test('button mode is the default', async () => {
