@@ -154,6 +154,15 @@ test('getPages lists titles and urls', async () => {
 	assert.deepEqual(await pageItems(fakeClicker({ offline: true })), [])
 })
 
+test('getPages names browser sources and lists a url once', async () => {
+	const url = 'https://weflab.com/alertlist?mode=remote'
+	const pages = [...PAGES, { ...PAGES[0], id: 'w2', title: '같은 주소' }]
+	assert.deepEqual(await pageItems(fakeClicker({ pages, sources: [{ name: '위플랩 알림', url }] })), [
+		{ value: url, label: '[소스] 위플랩 알림' },
+		{ value: 'https://toon.at/widget/controller/key', label: 'Toonation' },
+	])
+})
+
 test('getButtons numbers repeats', async () => {
 	const c = fakeClicker({ pages: PAGES, answer: () => [{ text: '시작', index: 0 }, { text: '시작', index: 1 }, { text: '스킵', index: 0 }] })
 	assert.deepEqual(await buttonItems(c, 'https://weflab.com/alertlist?mode=remote'), [

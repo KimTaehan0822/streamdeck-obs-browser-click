@@ -9,6 +9,7 @@ import {
 import type { JsonObject } from '@elgato/utils'
 import { execFile } from 'node:child_process'
 import { clickAt, evaluate, findPage, listPages, screenshot, type CdpPage } from './cdp.js'
+import { readBrowserSources, sourceNameFor, type BrowserSource } from './obs-sources.js'
 import { pageExpression, type ListItem, type Target } from './page-script.js'
 import { PRESETS, presetById, type Service } from './presets.js'
 
@@ -21,6 +22,7 @@ export interface Clicker {
 	screenshot(wsUrl: string): Promise<{ data: string; width: number; height: number }>
 	/** Whether obs64.exe runs, asked only when the port does not answer. */
 	obsRunning(): Promise<boolean>
+	browserSources(): Promise<BrowserSource[]>
 }
 
 export const OBS_CHECK_MS = 5000
@@ -36,7 +38,7 @@ export function createClicker(port: () => number): Clicker {
 		)
 		return running
 	}
-	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot, obsRunning }
+	return { port, listPages: () => listPages(port()), evaluate: (wsUrl, expr) => evaluate(wsUrl, expr), clickAt, screenshot, obsRunning, browserSources: () => readBrowserSources() }
 }
 
 export const POLL_MS = 1000
@@ -288,7 +290,14 @@ export function presetItemsFor(manifestId: string): Item[] {
 
 export async function pageItems(clicker: Clicker): Promise<Item[]> {
 	try {
-		return (await clicker.listPages()).map((p) => ({ value: p.url, label: p.title || p.url }))
+		const [pages, sources] = await Promise.all([clicker.listPages(), clicker.browserSources()])
+		// One row per address: the action finds pages by address, so a second copy could never be reached.
+		const items = new Map<string, Item>()
+		for (const p of pages) {
+			const name = sourceNameFor(p.url, sources)
+			if (!items.has(p.url)) items.set(p.url, { value: p.url, label: name ? `[소스] ${name}` : p.title || p.url })
+		}
+		return [...items.values()]
 	} catch {
 		return []
 	}

@@ -15,11 +15,12 @@ export function fakeAction(id, settings = {}) {
 }
 
 /** A Clicker whose pages and page answers the test sets; records every evaluate. */
-export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok', obs = false } = {}) {
+export function fakeClicker({ pages = [], answer = () => 'ok', offline = false, point = () => 'ok', obs = false, sources = [] } = {}) {
 	const evaluated = []
 	const clicked = []
 	const shots = []
 	return {
+		browserSources: async () => sources,
 		evaluated,
 		clicked,
 		shots,
