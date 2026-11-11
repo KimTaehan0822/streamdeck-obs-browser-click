@@ -3,7 +3,7 @@
 	"SDKVersion": 2,
 	"UUID": "com.haeunga0822.obs-browser-click",
 	"Name": "OBS Browser Click",
-	"Version": "0.1.1.0",
+	"Version": "0.2.0.0",
 	"Author": "김탄2",
 	"Icon": "imgs/plugin",
 	"Category": "OBS Browser Click",
