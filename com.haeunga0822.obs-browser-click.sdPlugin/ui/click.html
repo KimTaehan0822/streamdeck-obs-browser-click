@@ -3,6 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<script src="sdpi-components.js"></script>
+	<script src="update-check.js"></script>
 </head>
 <body>
 	<style>
@@ -150,6 +151,7 @@
 			})
 		}
 		main()
+		UpdateCheck.mountPluginNotice('streamdeck-obs-browser-click', { available: '새 버전이 나왔어요:', open: '릴리즈 페이지 열기' })
 	</script>
 </body>
 </html>
